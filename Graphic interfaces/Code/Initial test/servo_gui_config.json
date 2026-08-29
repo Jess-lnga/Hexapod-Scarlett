@@ -1,0 +1,203 @@
+{
+  "port": "COM8",
+  "sweep": {
+    "min_us": 1100,
+    "max_us": 1900,
+    "step_us": 10,
+    "interval_ms": 40
+  },
+  "channels": [
+    {
+      "enabled": false,
+      "selected": false,
+      "label": "empty",
+      "pulse_us": 1500
+    },
+    {
+      "enabled": false,
+      "selected": false,
+      "label": "empty",
+      "pulse_us": 1500
+    },
+    {
+      "enabled": false,
+      "selected": false,
+      "label": "empty",
+      "pulse_us": 1448
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "tibia",
+      "pulse_us": 1732
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "trocanter",
+      "pulse_us": 1534
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "coxa",
+      "pulse_us": 1397
+    },
+    {
+      "enabled": false,
+      "selected": false,
+      "label": "empty",
+      "pulse_us": 1500
+    },
+    {
+      "enabled": false,
+      "selected": false,
+      "label": "empty",
+      "pulse_us": 1500
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "tibia",
+      "pulse_us": 1939
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "coxa",
+      "pulse_us": 1424
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "trocanter",
+      "pulse_us": 1534
+    },
+    {
+      "enabled": false,
+      "selected": false,
+      "label": "empty",
+      "pulse_us": 1500
+    },
+    {
+      "enabled": false,
+      "selected": false,
+      "label": "empty",
+      "pulse_us": 1500
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "trocanter",
+      "pulse_us": 1534
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "coxa",
+      "pulse_us": 1424
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "tibia",
+      "pulse_us": 1775
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "coxa",
+      "pulse_us": 1446
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "trocanter",
+      "pulse_us": 1534
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "tibia",
+      "pulse_us": 1698
+    },
+    {
+      "enabled": false,
+      "selected": false,
+      "label": "empty",
+      "pulse_us": 1568
+    },
+    {
+      "enabled": false,
+      "selected": false,
+      "label": "empty",
+      "pulse_us": 1482
+    },
+    {
+      "enabled": false,
+      "selected": false,
+      "label": "empty",
+      "pulse_us": 1500
+    },
+    {
+      "enabled": false,
+      "selected": false,
+      "label": "empty",
+      "pulse_us": 1500
+    },
+    {
+      "enabled": false,
+      "selected": false,
+      "label": "empty",
+      "pulse_us": 1500
+    },
+    {
+      "enabled": false,
+      "selected": false,
+      "label": "empty",
+      "pulse_us": 1500
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "coxa",
+      "pulse_us": 1417
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "trocanter",
+      "pulse_us": 1534
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "tibia",
+      "pulse_us": 1750
+    },
+    {
+      "enabled": false,
+      "selected": false,
+      "label": "empty",
+      "pulse_us": 1500
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "tibia",
+      "pulse_us": 1767
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "trocanter",
+      "pulse_us": 1534
+    },
+    {
+      "enabled": true,
+      "selected": false,
+      "label": "coxa",
+      "pulse_us": 1436
+    }
+  ]
+}
