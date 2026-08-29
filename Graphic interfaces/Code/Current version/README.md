@@ -9,7 +9,7 @@ This is the first prototype of a Python desktop interface for importing and posi
 - Optional STEP/STP import if `cadquery` is installed
 - Object tree for selecting imported parts
 - Precise translation and rotation controls
-- Direct Coincidence mode: hover full detected surfaces in yellow, select them in orange, then align them with rotation
+- Direct Coincidence mode: hover full detected surfaces or inferred hole axes in yellow, select them in orange, then align them with rotation
 - Basic assembly alignment tools based on object bounding planes
 - Remove selected model button
 - Prusa-like STL display mode with anti-aliasing and sharp edge preservation
@@ -55,21 +55,16 @@ If `cadquery` is difficult to install on your machine, keep the workflow STL-onl
 
 There are now two alignment layers.
 
-Direct face coincidence:
+Direct coincidence:
 
 - Click `Coincidence`.
-- Move the cursor over the model: the selectable surface is highlighted in yellow with only its outer contour visible.
+- Move the cursor over the model: a selectable surface is highlighted in yellow, or a detected hole/cylindrical axis is shown as a yellow axis.
 - Click the face of the object you want to move: it stays highlighted in orange.
 - Click the target face on another object: it is also highlighted in orange.
 - The first object is translated until the two picked planes coincide.
 
-This direct mode starts from the STL triangle under the cursor, then expands the selection to connected coplanar triangles so the highlighted element behaves like a full planar surface. It can rotate the moving part to match the target plane normal. Curved/cylindrical surfaces are not interpreted as axes yet.
+This direct mode starts from the STL triangle under the cursor. On planar areas, it expands the selection to connected coplanar triangles so the highlighted element behaves like a full planar surface. On cylindrical or hole-like faceted areas, it analyses neighboring triangle normals to infer an axis, even when the STL is not a perfect circle. To select a hole axis, aim at the inner wall of the hole; clicking empty space at the center of the hole cannot be picked yet.
 
-Bounding-box alignment:
-
-- `Coincide selected plane to target plane`: aligns a selected X/Y/Z min, center or max bounding plane to a target X/Y/Z min, center or max bounding plane. Both features must use the same axis.
-- `Coincide centers`: moves the selected object so its bounding-box center matches the target object's bounding-box center.
-- `Copy target rotation`: copies the target object's Euler rotation values into the selected object.
 - `Remove selected model`: removes the selected object from the scene and the object tree.
 
 True Catia-like constraints such as cylindrical axis detection, line selection, persistent constraints and automatic rotation will need an additional feature/topology layer later.
@@ -95,6 +90,10 @@ python hexapod_3d_interface.py
 - Add parent/child hierarchy for body, coxa, femur and tibia parts
 - Add joint angle limits
 - Later: map joint angles to servo commands
+
+
+
+
 
 
 

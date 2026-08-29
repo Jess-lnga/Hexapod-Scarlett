@@ -48,6 +48,8 @@ AXIS_INDEX = {"x": 0, "y": 1, "z": 2}
 SURFACE_ANGLE_TOLERANCE_DEG = 8.0
 SURFACE_PLANE_TOLERANCE_RATIO = 0.002
 SURFACE_MIN_PLANE_TOLERANCE = 0.05
+AXIS_SMOOTH_ANGLE_TOLERANCE_DEG = 50.0
+AXIS_MIN_CELLS = 8
 
 
 @dataclass
@@ -65,6 +67,11 @@ class PickedSurface:
     local_normal: np.ndarray
     cell_id: int
     cell_ids: list[int]
+    feature_kind: str = "surface"
+    local_axis_point: Optional[np.ndarray] = None
+    local_axis_direction: Optional[np.ndarray] = None
+    local_axis_length: float = 0.0
+    local_axis_radius: float = 0.0
 
 
 @dataclass
@@ -175,18 +182,6 @@ class HexapodModeler(QMainWindow):
         self.selected_feature_combo.setEnabled(False)
         self.target_feature_combo.setEnabled(False)
 
-        align_planes_button = QPushButton("Coincide selected plane to target plane")
-        align_planes_button.clicked.connect(self.align_selected_plane_to_target)
-        align_centers_button = QPushButton("Coincide centers")
-        align_centers_button.clicked.connect(self.align_selected_center_to_target)
-        copy_rotation_button = QPushButton("Copy target rotation")
-        copy_rotation_button.clicked.connect(self.copy_target_rotation_to_selected)
-
-        alignment_form = QFormLayout()
-        alignment_form.addRow(QLabel("Bounding-box alignment"))
-        alignment_form.addRow("Target", self.target_combo)
-        alignment_form.addRow("Selected feature", self.selected_feature_combo)
-        alignment_form.addRow("Target feature", self.target_feature_combo)
 
         side_panel = QWidget()
         side_layout = QVBoxLayout(side_panel)
@@ -200,10 +195,7 @@ class HexapodModeler(QMainWindow):
         side_layout.addWidget(clear_picks_button)
         side_layout.addWidget(self.reverse_coincidence_button)
         side_layout.addWidget(self.coincidence_status)
-        side_layout.addLayout(alignment_form)
-        side_layout.addWidget(align_planes_button)
-        side_layout.addWidget(align_centers_button)
-        side_layout.addWidget(copy_rotation_button)
+
 
         splitter = QSplitter(Qt.Horizontal)
         splitter.addWidget(self.plotter)
@@ -389,6 +381,7 @@ class HexapodModeler(QMainWindow):
         self._update_coincidence_status()
         if len(self.coincidence_picks) == 2:
             self.last_coincidence = (self.coincidence_picks[0], self.coincidence_picks[1])
+            self.coincidence_orientation_sign = self._minimal_rotation_orientation_sign(*self.last_coincidence)
             self.reverse_coincidence_button.setEnabled(True)
             self._apply_direct_plane_coincidence(*self.last_coincidence)
 
@@ -417,11 +410,77 @@ class HexapodModeler(QMainWindow):
         normal = topology.cell_normals[cell_id]
         if np.linalg.norm(normal) <= 1e-9:
             return None
+        axis_feature = self._axis_feature_from_cell(object_name, cell_id)
+        if axis_feature is not None:
+            return axis_feature
+
         cell_ids = self._coplanar_connected_cells(object_name, cell_id)
         all_points = np.vstack([topology.cell_points[i] for i in cell_ids])
         local_point = all_points.mean(axis=0)
         local_normal = self._average_surface_normal(topology.cell_normals[cell_ids], normal)
         return PickedSurface(object_name, local_point, local_normal, cell_id, cell_ids)
+
+    def _axis_feature_from_cell(self, object_name: str, seed_cell_id: int) -> Optional[PickedSurface]:
+        topology = self.mesh_topologies[object_name]
+        cell_ids = self._smooth_connected_cells(object_name, seed_cell_id)
+        if len(cell_ids) < AXIS_MIN_CELLS:
+            return None
+
+        normals = topology.cell_normals[cell_ids]
+        normal_covariance = np.cov(normals.T)
+        eigenvalues, eigenvectors = np.linalg.eigh(normal_covariance)
+        axis_direction = eigenvectors[:, int(np.argmin(eigenvalues))]
+        axis_direction = axis_direction / np.linalg.norm(axis_direction)
+
+        normal_spread = float(np.trace(normal_covariance))
+        if normal_spread < 0.04:
+            return None
+        if float(np.mean(np.abs(normals @ axis_direction))) > 0.28:
+            return None
+
+        centers = topology.cell_centers[cell_ids]
+        axis_point = centers.mean(axis=0)
+        axial = (centers - axis_point) @ axis_direction
+        radial_vectors = centers - axis_point - np.outer(axial, axis_direction)
+        radii = np.linalg.norm(radial_vectors, axis=1)
+        mean_radius = float(np.mean(radii))
+        if mean_radius <= 1e-6:
+            return None
+        if float(np.std(radii) / mean_radius) > 0.35:
+            return None
+
+        axis_length = max(float(np.max(axial) - np.min(axial)), topology.diagonal * 0.25)
+        return PickedSurface(
+            object_name=object_name,
+            local_point=axis_point,
+            local_normal=axis_direction,
+            cell_id=seed_cell_id,
+            cell_ids=cell_ids,
+            feature_kind="axis",
+            local_axis_point=axis_point,
+            local_axis_direction=axis_direction,
+            local_axis_length=axis_length,
+            local_axis_radius=mean_radius,
+        )
+
+    def _smooth_connected_cells(self, object_name: str, seed_cell_id: int) -> list[int]:
+        topology = self.mesh_topologies[object_name]
+        cos_angle = math.cos(math.radians(AXIS_SMOOTH_ANGLE_TOLERANCE_DEG))
+        surface_ids = []
+        visited = {seed_cell_id}
+        queue = deque([seed_cell_id])
+        while queue:
+            current = queue.popleft()
+            surface_ids.append(current)
+            current_normal = topology.cell_normals[current]
+            for neighbor in topology.neighbors[current]:
+                if neighbor in visited:
+                    continue
+                visited.add(neighbor)
+                neighbor_normal = topology.cell_normals[neighbor]
+                if float(np.dot(current_normal, neighbor_normal)) >= cos_angle:
+                    queue.append(neighbor)
+        return surface_ids
 
     def _coplanar_connected_cells(self, object_name: str, seed_cell_id: int) -> list[int]:
         topology = self.mesh_topologies[object_name]
@@ -481,10 +540,28 @@ class HexapodModeler(QMainWindow):
         return max(float(diagonal) * 0.0015, 0.02)
 
     def _highlight_mesh_for(self, picked: PickedSurface) -> pv.PolyData:
+        if picked.feature_kind == "axis":
+            point, direction, length, radius = self._world_axis_for(picked)
+            p0 = point - direction * length * 0.65
+            p1 = point + direction * length * 0.65
+            line = pv.Line(p0, p1)
+            tube_radius = max(radius * 0.08, self._highlight_offset_for(picked) * 1.5)
+            return line.tube(radius=tube_radius, n_sides=16)
+
         mesh = self.meshes[picked.object_name].extract_cells(picked.cell_ids).extract_geometry().triangulate()
         world_points = self._transform_points(np.array(mesh.points), self._transform_matrix_for(picked.object_name))
         world_points = world_points + self._world_normal_for_surface(picked) * self._highlight_offset_for(picked)
         return pv.PolyData(world_points, mesh.faces).clean()
+
+    def _world_axis_for(self, picked: PickedSurface) -> tuple[np.ndarray, np.ndarray, float, float]:
+        if picked.local_axis_point is None or picked.local_axis_direction is None:
+            point = self._world_point_for_surface(picked)
+            direction = self._world_normal_for_surface(picked)
+            return point, direction, self.mesh_topologies[picked.object_name].diagonal * 0.5, 1.0
+        point = self._transform_points(np.array([picked.local_axis_point]), self._transform_matrix_for(picked.object_name))[0]
+        direction = self._rotation_matrix_for(picked.object_name) @ picked.local_axis_direction
+        direction = direction / np.linalg.norm(direction)
+        return point, direction, picked.local_axis_length, picked.local_axis_radius
 
     def _highlight_boundary_for(self, highlighted: pv.PolyData) -> pv.PolyData:
         return highlighted.extract_feature_edges(
@@ -506,13 +583,14 @@ class HexapodModeler(QMainWindow):
             show_edges=False,
             pickable=False,
         )
-        self.plotter.add_mesh(
-            self._highlight_boundary_for(highlighted),
-            name=self.hover_boundary_name,
-            color="#fff4b0",
-            line_width=4,
-            pickable=False,
-        )
+        if picked.feature_kind == "surface":
+            self.plotter.add_mesh(
+                self._highlight_boundary_for(highlighted),
+                name=self.hover_boundary_name,
+                color="#fff4b0",
+                line_width=4,
+                pickable=False,
+            )
         self.plotter.render()
 
     def _clear_hover_highlight(self, render: bool = True) -> None:
@@ -541,13 +619,14 @@ class HexapodModeler(QMainWindow):
             show_edges=False,
             pickable=False,
         )
-        self.plotter.add_mesh(
-            self._highlight_boundary_for(highlighted),
-            name=boundary_name,
-            color="#ffd29a",
-            line_width=5,
-            pickable=False,
-        )
+        if picked.feature_kind == "surface":
+            self.plotter.add_mesh(
+                self._highlight_boundary_for(highlighted),
+                name=boundary_name,
+                color="#ffd29a",
+                line_width=5,
+                pickable=False,
+            )
         self._clear_hover_highlight(render=False)
         self.plotter.render()
 
@@ -598,9 +677,27 @@ class HexapodModeler(QMainWindow):
         self._apply_direct_plane_coincidence(*self.last_coincidence, clear_selection=False)
         self.coincidence_status.setText("Coincidence: reversed last orientation.")
 
+    def _minimal_rotation_orientation_sign(self, moving: PickedSurface, target: PickedSurface) -> float:
+        if moving.feature_kind == "axis" and target.feature_kind == "axis":
+            _, moving_direction, _, _ = self._world_axis_for(moving)
+            _, target_direction, _, _ = self._world_axis_for(target)
+            return 1.0 if float(np.dot(moving_direction, target_direction)) >= 0.0 else -1.0
+
+        moving_normal = self._world_normal_for_surface(moving)
+        target_normal = self._world_normal_for_surface(target)
+        return 1.0 if float(np.dot(moving_normal, target_normal)) >= 0.0 else -1.0
     def _apply_direct_plane_coincidence(self, moving: PickedSurface, target: PickedSurface, clear_selection: bool = True) -> None:
         if moving.object_name == target.object_name:
             self.coincidence_status.setText("Coincidence: choose two different objects.")
+            self.coincidence_picks.clear()
+            self._clear_pick_highlights()
+            return
+
+        if moving.feature_kind == "axis" and target.feature_kind == "axis":
+            self._apply_axis_coincidence(moving, target, clear_selection)
+            return
+        if moving.feature_kind != target.feature_kind:
+            self.coincidence_status.setText("Coincidence: surface-to-axis constraints are not supported yet.")
             self.coincidence_picks.clear()
             self._clear_pick_highlights()
             return
@@ -632,6 +729,33 @@ class HexapodModeler(QMainWindow):
         self.coincidence_status.setText(f"Coincidence: '{moving.object_name}' moved onto '{target.object_name}'.")
         self.plotter.render()
 
+    def _apply_axis_coincidence(self, moving: PickedSurface, target: PickedSurface, clear_selection: bool = True) -> None:
+        moving_point, moving_direction, _, _ = self._world_axis_for(moving)
+        target_point, target_direction, _, _ = self._world_axis_for(target)
+        target_direction = target_direction * self.coincidence_orientation_sign
+        rotation_delta = self._rotation_between_vectors(moving_direction, target_direction)
+        current_rotation = self._rotation_matrix_for(moving.object_name)
+        new_rotation = rotation_delta @ current_rotation
+
+        obj = self.objects[moving.object_name]
+        obj.rotation = self._euler_degrees_from_rotation_matrix(new_rotation)
+        self._apply_transform(moving.object_name)
+
+        moved_point, _, _, _ = self._world_axis_for(moving)
+        target_point, target_direction, _, _ = self._world_axis_for(target)
+        between_axes = target_point - moved_point
+        delta = between_axes - np.dot(between_axes, target_direction) * target_direction
+        obj.position = [obj.position[i] + float(delta[i]) for i in range(3)]
+
+        self.selected_name = moving.object_name
+        self._select_tree_item(moving.object_name)
+        self._apply_transform(moving.object_name)
+        self._load_selected_into_controls()
+        if clear_selection:
+            self.coincidence_picks.clear()
+            self._clear_pick_highlights(render=False)
+        self.coincidence_status.setText(f"Coincidence: axis of '{moving.object_name}' aligned to axis of '{target.object_name}'.")
+        self.plotter.render()
     def _rotation_between_vectors(self, source: np.ndarray, target: np.ndarray) -> np.ndarray:
         source = source / np.linalg.norm(source)
         target = target / np.linalg.norm(target)
@@ -919,4 +1043,14 @@ if __name__ == "__main__":
     window = HexapodModeler()
     window.show()
     sys.exit(app.exec())
+
+
+
+
+
+
+
+
+
+
 
