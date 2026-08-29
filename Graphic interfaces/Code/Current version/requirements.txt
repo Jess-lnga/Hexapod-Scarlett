@@ -1,0 +1,7 @@
+PySide6>=6.7
+pyvista>=0.44
+pyvistaqt>=0.11
+numpy>=1.26
+
+# Optional, only needed for STEP/STP import. It can be heavy to install.
+# cadquery>=2.4
