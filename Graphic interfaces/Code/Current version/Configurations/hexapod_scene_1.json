@@ -1,0 +1,30 @@
+[
+  {
+    "name": "Main socle",
+    "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Body\\Main socle.stl",
+    "position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "rotation": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "name": "Link led-head",
+    "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Link led-head.stl",
+    "position": [
+      0.0,
+      0.0,
+      -50.0
+    ],
+    "rotation": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  }
+]

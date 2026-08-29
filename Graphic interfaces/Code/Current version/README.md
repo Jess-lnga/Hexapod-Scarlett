@@ -9,9 +9,11 @@ This is the first prototype of a Python desktop interface for importing and posi
 - Optional STEP/STP import if `cadquery` is installed
 - Object tree for selecting imported parts
 - Precise translation and rotation controls
+- Direct Coincidence mode: hover full detected surfaces in yellow, select them in orange, then align them with rotation
+- Basic assembly alignment tools based on object bounding planes
+- Remove selected model button
 - Prusa-like STL display mode with anti-aliasing and sharp edge preservation
 - Save/load of a scene layout as JSON
-- Placeholder for future alignment/constraint tools
 
 ## Install
 
@@ -49,6 +51,29 @@ pip install cadquery
 
 If `cadquery` is difficult to install on your machine, keep the workflow STL-only for now and export high-resolution STL files from your CAD software.
 
+## Alignment Tools
+
+There are now two alignment layers.
+
+Direct face coincidence:
+
+- Click `Coincidence`.
+- Move the cursor over the model: the selectable surface is highlighted in yellow with only its outer contour visible.
+- Click the face of the object you want to move: it stays highlighted in orange.
+- Click the target face on another object: it is also highlighted in orange.
+- The first object is translated until the two picked planes coincide.
+
+This direct mode starts from the STL triangle under the cursor, then expands the selection to connected coplanar triangles so the highlighted element behaves like a full planar surface. It can rotate the moving part to match the target plane normal. Curved/cylindrical surfaces are not interpreted as axes yet.
+
+Bounding-box alignment:
+
+- `Coincide selected plane to target plane`: aligns a selected X/Y/Z min, center or max bounding plane to a target X/Y/Z min, center or max bounding plane. Both features must use the same axis.
+- `Coincide centers`: moves the selected object so its bounding-box center matches the target object's bounding-box center.
+- `Copy target rotation`: copies the target object's Euler rotation values into the selected object.
+- `Remove selected model`: removes the selected object from the scene and the object tree.
+
+True Catia-like constraints such as cylindrical axis detection, line selection, persistent constraints and automatic rotation will need an additional feature/topology layer later.
+
 ## STL Quality Note
 
 STL files are already triangulated meshes. The app now preserves the original triangles instead of subdividing them, then improves the display with clean normals, sharp-edge handling, lighting and anti-aliasing, closer to the way slicers display mechanical parts.
@@ -70,4 +95,10 @@ python hexapod_3d_interface.py
 - Add parent/child hierarchy for body, coxa, femur and tibia parts
 - Add joint angle limits
 - Later: map joint angles to servo commands
+
+
+
+
+
+
 
