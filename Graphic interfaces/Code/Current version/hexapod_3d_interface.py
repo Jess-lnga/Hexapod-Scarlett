@@ -13,6 +13,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QApplication,
+    QComboBox,
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
@@ -49,6 +50,9 @@ class HexapodModeler(QMainWindow):
         self.actors = {}
         self.selected_name: Optional[str] = None
         self._updating_controls = False
+        self.display_mode = "sharp"
+        self.step_linear_tolerance = 0.02
+        self.step_angular_tolerance = 0.05
 
         self._build_ui()
         self._build_scene()
@@ -84,6 +88,13 @@ class HexapodModeler(QMainWindow):
         for spin in [*self.position_spins, *self.rotation_spins]:
             spin.valueChanged.connect(self._on_transform_changed)
 
+        self.quality_combo = QComboBox()
+        self.quality_combo.addItem("Sharp CAD view", "sharp")
+        self.quality_combo.addItem("Smooth preview", "smooth")
+        self.quality_combo.addItem("Facets debug", "faceted")
+        self.quality_combo.setCurrentIndex(0)
+        self.quality_combo.currentIndexChanged.connect(self._on_quality_changed)
+
         form = QFormLayout()
         form.addRow(QLabel("Position"))
         form.addRow("X", self.position_spins[0])
@@ -93,6 +104,7 @@ class HexapodModeler(QMainWindow):
         form.addRow("Rx", self.rotation_spins[0])
         form.addRow("Ry", self.rotation_spins[1])
         form.addRow("Rz", self.rotation_spins[2])
+        form.addRow("Display quality", self.quality_combo)
 
         zero_button = QPushButton("Move selected to origin")
         zero_button.clicked.connect(self.move_selected_to_origin)
@@ -123,6 +135,8 @@ class HexapodModeler(QMainWindow):
 
     def _build_scene(self) -> None:
         self.plotter.set_background("#1f2329")
+        self.plotter.enable_anti_aliasing("fxaa")
+        self.plotter.enable_eye_dome_lighting()
         self.plotter.add_axes(line_width=3, labels_off=False)
         self.plotter.show_grid(
             color="#686f7a",
@@ -164,9 +178,7 @@ class HexapodModeler(QMainWindow):
         obj = SceneObject(name=name, file_path=str(path), position=[0.0, 0.0, 0.0], rotation=[0.0, 0.0, 0.0])
         self.objects[name] = obj
         self.meshes[name] = mesh
-
-        actor = self.plotter.add_mesh(mesh, name=name, color="#c9d1d9", smooth_shading=True, show_edges=False)
-        self.actors[name] = actor
+        self.actors[name] = self._add_mesh_actor(name, mesh)
         self._apply_transform(name)
 
         item = QTreeWidgetItem([name])
@@ -181,7 +193,7 @@ class HexapodModeler(QMainWindow):
             mesh = pv.read(path)
             if not isinstance(mesh, pv.PolyData):
                 mesh = mesh.extract_geometry()
-            return mesh
+            return self._prepare_stl_mesh(mesh)
 
         if suffix in {".stp", ".step"}:
             return self._load_step_mesh(path)
@@ -194,7 +206,8 @@ class HexapodModeler(QMainWindow):
         except ImportError as exc:
             raise RuntimeError(
                 "STEP/STP import needs the optional 'cadquery' package. "
-                "Install it with: pip install cadquery"
+                "Activate your environment, then install it with: pip install cadquery. "
+                "If installation is difficult, export the part as a high-resolution STL from your CAD software for now."
             ) from exc
 
         shape = cq.importers.importStep(str(path))
@@ -202,7 +215,7 @@ class HexapodModeler(QMainWindow):
         faces = []
 
         for solid in shape.solids().vals():
-            verts, tris = solid.tessellate(0.1)
+            verts, tris = solid.tessellate(self.step_linear_tolerance, self.step_angular_tolerance)
             base = len(vertices)
             vertices.extend([[v.x, v.y, v.z] for v in verts])
             for tri in tris:
@@ -211,7 +224,61 @@ class HexapodModeler(QMainWindow):
         if not vertices or not faces:
             raise RuntimeError("STEP file imported, but no mesh could be generated.")
 
-        return pv.PolyData(np.array(vertices), np.array(faces))
+        return self._prepare_stl_mesh(pv.PolyData(np.array(vertices), np.array(faces)))
+
+    def _prepare_stl_mesh(self, mesh: pv.PolyData) -> pv.PolyData:
+        # Keep STL geometry untouched. Display quality is handled with normals and rendering,
+        # not destructive subdivision, so mechanical edges stay accurate.
+        mesh = mesh.extract_geometry().triangulate().clean()
+        return mesh.compute_normals(
+            point_normals=True,
+            cell_normals=True,
+            auto_orient_normals=True,
+            consistent_normals=True,
+            split_vertices=True,
+            feature_angle=35.0,
+        )
+
+    def _add_mesh_actor(self, name: str, mesh: pv.PolyData):
+        display_mesh = mesh
+        smooth_shading = self.display_mode in {"sharp", "smooth"}
+        show_edges = self.display_mode == "faceted"
+
+        if self.display_mode == "smooth":
+            display_mesh = mesh.compute_normals(
+                point_normals=True,
+                cell_normals=False,
+                auto_orient_normals=True,
+                consistent_normals=True,
+                split_vertices=False,
+            )
+
+        return self.plotter.add_mesh(
+            display_mesh,
+            name=name,
+            color="#58a6ff" if name == self.selected_name else "#c9d1d9",
+            smooth_shading=smooth_shading,
+            show_edges=show_edges,
+            edge_color="#20242b",
+            ambient=0.28,
+            diffuse=0.72,
+            specular=0.18,
+            specular_power=28,
+        )
+
+    def _on_quality_changed(self) -> None:
+        self.display_mode = self.quality_combo.currentData()
+        self._rebuild_actors()
+
+    def _rebuild_actors(self) -> None:
+        for name in list(self.actors):
+            self.plotter.remove_actor(name)
+        self.actors.clear()
+
+        for name, mesh in self.meshes.items():
+            self.actors[name] = self._add_mesh_actor(name, mesh)
+            self._apply_transform(name)
+        self.plotter.render()
 
     def _unique_name(self, base: str) -> str:
         candidate = base
@@ -319,7 +386,7 @@ class HexapodModeler(QMainWindow):
             obj.name = self._unique_name(obj.name)
             self.objects[obj.name] = obj
             self.meshes[obj.name] = mesh
-            self.actors[obj.name] = self.plotter.add_mesh(mesh, name=obj.name, color="#c9d1d9", smooth_shading=True)
+            self.actors[obj.name] = self._add_mesh_actor(obj.name, mesh)
             self._apply_transform(obj.name)
             item = QTreeWidgetItem([obj.name])
             item.setData(0, Qt.UserRole, obj.name)
