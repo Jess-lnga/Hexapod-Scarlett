@@ -13,13 +13,20 @@ import pyvista as pv
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QApplication,
+    QCheckBox,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -58,6 +65,8 @@ class SceneObject:
     file_path: str
     position: list[float]
     rotation: list[float]
+    fixed_absolute: bool = False
+    rigid_group: str = ""
 
 
 @dataclass
@@ -83,6 +92,86 @@ class MeshTopology:
     diagonal: float
 
 
+@dataclass
+class ConstraintRecord:
+    id: int
+    type: str
+    name: str
+    objects: list[str]
+    parameters: dict
+
+
+class AddConstraintDialog(QDialog):
+    def __init__(self, object_names: list[str], parent=None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Add constraint")
+        self.resize(420, 480)
+
+        self.type_combo = QComboBox()
+        self.type_combo.addItem("Absolute fixity", "absolute")
+        self.type_combo.addItem("Relative rigid group", "relative")
+        self.type_combo.addItem("Object to axis", "object_to_axis")
+        self.type_combo.addItem("Object to plane", "object_to_plane")
+        self.type_combo.addItem("Other / placeholder", "other")
+        self.type_combo.currentIndexChanged.connect(self._update_help_text)
+
+        self.group_name = QLineEdit()
+        self.group_name.setPlaceholderText("Optional group/constraint name")
+
+        self.object_list = QListWidget()
+        self.object_list.setSelectionMode(QAbstractItemView.MultiSelection)
+        for name in object_names:
+            QListWidgetItem(name, self.object_list)
+
+        self.help_label = QLabel()
+        self.help_label.setWordWrap(True)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+
+        form = QFormLayout()
+        form.addRow("Type", self.type_combo)
+        form.addRow("Name", self.group_name)
+
+        layout = QVBoxLayout(self)
+        layout.addLayout(form)
+        layout.addWidget(QLabel("Objects"))
+        layout.addWidget(self.object_list)
+        layout.addWidget(self.help_label)
+        layout.addWidget(buttons)
+        self._update_help_text()
+
+    def selected_type(self) -> str:
+        return self.type_combo.currentData()
+
+    def selected_objects(self) -> list[str]:
+        return [item.text() for item in self.object_list.selectedItems()]
+
+    def entered_name(self) -> str:
+        return self.group_name.text().strip()
+
+    def accept(self) -> None:
+        selected = self.selected_objects()
+        constraint_type = self.selected_type()
+        if constraint_type in {"absolute", "relative"} and not selected:
+            QMessageBox.information(self, "Add constraint", "Select at least one object.")
+            return
+        if constraint_type in {"object_to_axis", "object_to_plane"} and len(selected) != 2:
+            QMessageBox.information(self, "Add constraint", "Select exactly two objects for this first version.")
+            return
+        super().accept()
+
+    def _update_help_text(self) -> None:
+        help_by_type = {
+            "absolute": "Selected objects become fixed in world space.",
+            "relative": "Selected objects receive the same rigid group and move as one assembly.",
+            "object_to_axis": "First version records the relationship between two objects. Use direct Coincidence for picked axes.",
+            "object_to_plane": "First version records the relationship between two objects. Use direct Coincidence for picked planes.",
+            "other": "Placeholder for future joint, limit or servo-related constraints.",
+        }
+        self.help_label.setText(help_by_type[self.selected_type()])
+
 class HexapodModeler(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
@@ -90,6 +179,8 @@ class HexapodModeler(QMainWindow):
         self.resize(1450, 900)
 
         self.objects: dict[str, SceneObject] = {}
+        self.constraints: list[ConstraintRecord] = []
+        self.next_constraint_id = 1
         self.meshes: dict[str, pv.PolyData] = {}
         self.mesh_topologies: dict[str, MeshTopology] = {}
         self.actors = {}
@@ -134,6 +225,11 @@ class HexapodModeler(QMainWindow):
         self.tree.setHeaderLabel("3D objects")
         self.tree.itemSelectionChanged.connect(self._on_tree_selection_changed)
 
+        self.constraints_tree = QTreeWidget()
+        self.constraints_tree.setHeaderLabel("Constraints")
+        add_constraint_button = QPushButton("Add constraint")
+        add_constraint_button.clicked.connect(self.add_constraint)
+
         self.position_spins = [self._make_spinbox(-10000, 10000, 0.1) for _ in range(3)]
         self.rotation_spins = [self._make_spinbox(-360, 360, 0.1) for _ in range(3)]
         for spin in [*self.position_spins, *self.rotation_spins]:
@@ -161,6 +257,20 @@ class HexapodModeler(QMainWindow):
         remove_button = QPushButton("Remove selected model")
         remove_button.clicked.connect(self.remove_selected_model)
 
+        self.fixed_absolute_checkbox = QCheckBox("Fixed absolute")
+        self.fixed_absolute_checkbox.setEnabled(False)
+        self.fixed_absolute_checkbox.stateChanged.connect(self._on_fixed_absolute_changed)
+
+        self.rigid_group_edit = QLineEdit()
+        self.rigid_group_edit.setPlaceholderText("Example: body, front_left_coxa")
+        self.rigid_group_edit.setEnabled(False)
+        self.rigid_group_edit.editingFinished.connect(self._on_rigid_group_changed)
+
+        constraints_form = QFormLayout()
+        constraints_form.addRow(QLabel("Constraints"))
+        constraints_form.addRow(self.fixed_absolute_checkbox)
+        constraints_form.addRow("Rigid group", self.rigid_group_edit)
+
         self.coincidence_button = QPushButton("Coincidence")
         self.coincidence_button.setCheckable(True)
         self.coincidence_button.clicked.connect(self.toggle_coincidence_mode)
@@ -186,10 +296,14 @@ class HexapodModeler(QMainWindow):
         side_panel = QWidget()
         side_layout = QVBoxLayout(side_panel)
         side_layout.addWidget(QLabel("Scene tree"))
-        side_layout.addWidget(self.tree, stretch=1)
+        side_layout.addWidget(self.tree, stretch=2)
+        side_layout.addWidget(QLabel("Constraints"))
+        side_layout.addWidget(self.constraints_tree, stretch=1)
+        side_layout.addWidget(add_constraint_button)
         side_layout.addLayout(transform_form)
         side_layout.addWidget(zero_button)
         side_layout.addWidget(remove_button)
+        side_layout.addLayout(constraints_form)
         side_layout.addWidget(QLabel("Direct face constraint"))
         side_layout.addWidget(self.coincidence_button)
         side_layout.addWidget(clear_picks_button)
@@ -702,6 +816,13 @@ class HexapodModeler(QMainWindow):
             self._clear_pick_highlights()
             return
 
+        if self.objects[moving.object_name].fixed_absolute:
+            self.coincidence_status.setText(f"Constraint: '{moving.object_name}' is fixed absolute and cannot be moved.")
+            self.coincidence_picks.clear()
+            self._clear_pick_highlights()
+            return
+        old_matrix = self._transform_matrix_for(moving.object_name)
+
         moving_normal = self._world_normal_for_surface(moving)
         target_normal = self._world_normal_for_surface(target) * self.coincidence_orientation_sign
         rotation_delta = self._rotation_between_vectors(moving_normal, target_normal)
@@ -722,6 +843,7 @@ class HexapodModeler(QMainWindow):
         self.selected_name = moving.object_name
         self._select_tree_item(moving.object_name)
         self._apply_transform(moving.object_name)
+        self._propagate_rigid_group_delta(moving.object_name, old_matrix)
         self._load_selected_into_controls()
         if clear_selection:
             self.coincidence_picks.clear()
@@ -730,6 +852,13 @@ class HexapodModeler(QMainWindow):
         self.plotter.render()
 
     def _apply_axis_coincidence(self, moving: PickedSurface, target: PickedSurface, clear_selection: bool = True) -> None:
+        if self.objects[moving.object_name].fixed_absolute:
+            self.coincidence_status.setText(f"Constraint: '{moving.object_name}' is fixed absolute and cannot be moved.")
+            self.coincidence_picks.clear()
+            self._clear_pick_highlights()
+            return
+        old_matrix = self._transform_matrix_for(moving.object_name)
+
         moving_point, moving_direction, _, _ = self._world_axis_for(moving)
         target_point, target_direction, _, _ = self._world_axis_for(target)
         target_direction = target_direction * self.coincidence_orientation_sign
@@ -750,6 +879,7 @@ class HexapodModeler(QMainWindow):
         self.selected_name = moving.object_name
         self._select_tree_item(moving.object_name)
         self._apply_transform(moving.object_name)
+        self._propagate_rigid_group_delta(moving.object_name, old_matrix)
         self._load_selected_into_controls()
         if clear_selection:
             self.coincidence_picks.clear()
@@ -798,6 +928,145 @@ class HexapodModeler(QMainWindow):
                 self.tree.setCurrentItem(item)
                 return
 
+    def add_constraint(self) -> None:
+        if not self.objects:
+            QMessageBox.information(self, "Add constraint", "Import at least one 3D object first.")
+            return
+
+        dialog = AddConstraintDialog(list(self.objects.keys()), self)
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        constraint_type = dialog.selected_type()
+        objects = dialog.selected_objects()
+        name = dialog.entered_name() or self._default_constraint_name(constraint_type)
+        constraint = ConstraintRecord(
+            id=self.next_constraint_id,
+            type=constraint_type,
+            name=name,
+            objects=objects,
+            parameters=self._constraint_parameters_from_recent_picks(constraint_type, objects),
+        )
+        self.next_constraint_id += 1
+        self.constraints.append(constraint)
+        self._apply_constraint_record(constraint)
+        self._rebuild_constraints_tree()
+        self._highlight_selected()
+
+    def _constraint_parameters_from_recent_picks(self, constraint_type: str, objects: list[str]) -> dict:
+        if constraint_type not in {"object_to_axis", "object_to_plane"}:
+            return {}
+        if not self.last_coincidence:
+            return {"status": "recorded", "note": "No recent picked geometry was available."}
+
+        expected_kind = "axis" if constraint_type == "object_to_axis" else "surface"
+        picked_features = [pick for pick in self.last_coincidence if pick.object_name in objects]
+        matching_features = [pick for pick in picked_features if pick.feature_kind == expected_kind]
+        parameters = {
+            "status": "recorded",
+            "picked_features": [self._serialize_pick_for_constraint(pick) for pick in picked_features],
+        }
+        if matching_features:
+            parameters["status"] = "linked_to_recent_coincidence"
+        else:
+            parameters["note"] = f"Recent Coincidence picks did not include a {expected_kind} feature."
+        return parameters
+
+    def _serialize_pick_for_constraint(self, pick: PickedSurface) -> dict:
+        data = {
+            "object": pick.object_name,
+            "kind": pick.feature_kind,
+            "cell_id": int(pick.cell_id),
+            "cell_ids": [int(cell_id) for cell_id in pick.cell_ids],
+            "local_point": [float(value) for value in pick.local_point],
+            "local_normal": [float(value) for value in pick.local_normal],
+        }
+        if pick.local_axis_point is not None:
+            data["local_axis_point"] = [float(value) for value in pick.local_axis_point]
+        if pick.local_axis_direction is not None:
+            data["local_axis_direction"] = [float(value) for value in pick.local_axis_direction]
+        if pick.axis_radius is not None:
+            data["axis_radius"] = float(pick.axis_radius)
+        return data
+    def _default_constraint_name(self, constraint_type: str) -> str:
+        same_type_count = sum(1 for constraint in self.constraints if constraint.type == constraint_type) + 1
+        labels = {
+            "absolute": "Absolute",
+            "relative": "Relative",
+            "object_to_axis": "ObjectToAxis",
+            "object_to_plane": "ObjectToPlane",
+            "other": "Other",
+        }
+        return f"{labels.get(constraint_type, constraint_type)} {same_type_count}"
+
+    def _apply_constraint_record(self, constraint: ConstraintRecord) -> None:
+        existing_objects = [name for name in constraint.objects if name in self.objects]
+        if constraint.type == "absolute":
+            for name in existing_objects:
+                self.objects[name].fixed_absolute = True
+        elif constraint.type == "relative":
+            group_name = constraint.parameters.get("rigid_group") or constraint.name.strip() or f"relative_{constraint.id}"
+            constraint.parameters["rigid_group"] = group_name
+            for name in existing_objects:
+                self.objects[name].rigid_group = group_name
+        elif constraint.type in {"object_to_axis", "object_to_plane"}:
+            constraint.parameters.setdefault("status", "recorded")
+            constraint.parameters.setdefault(
+                "note",
+                "Recorded from the constraints panel. Use direct Coincidence to create picked geometry alignment.",
+            )
+        if self.selected_name:
+            self._load_selected_into_controls()
+
+    def _rebuild_constraints_tree(self) -> None:
+        self.constraints_tree.clear()
+        for constraint in self.constraints:
+            item = QTreeWidgetItem([f"{constraint.name} ({constraint.type})"])
+            item.setData(0, Qt.UserRole, constraint.id)
+            for object_name in constraint.objects:
+                child = QTreeWidgetItem([object_name])
+                item.addChild(child)
+            for key, value in constraint.parameters.items():
+                child = QTreeWidgetItem([f"{key}: {value}"])
+                item.addChild(child)
+            self.constraints_tree.addTopLevelItem(item)
+            item.setExpanded(True)
+
+    def _rigid_component_for(self, object_name: str) -> set[str]:
+        if object_name not in self.objects:
+            return set()
+        component = {object_name}
+        queue = [object_name]
+        while queue:
+            current = queue.pop(0)
+            current_group = self.objects[current].rigid_group.strip()
+            linked: set[str] = set()
+            if current_group:
+                linked.update(name for name, obj in self.objects.items() if obj.rigid_group.strip() == current_group)
+            for constraint in self.constraints:
+                if constraint.type == "relative" and current in constraint.objects:
+                    linked.update(name for name in constraint.objects if name in self.objects)
+            for name in linked:
+                if name not in component:
+                    component.add(name)
+                    queue.append(name)
+        return component
+
+    def _related_objects_for(self, object_name: str) -> set[str]:
+        if object_name not in self.objects:
+            return set()
+        related = self._rigid_component_for(object_name) - {object_name}
+        for constraint in self.constraints:
+            if object_name in constraint.objects:
+                related.update(name for name in constraint.objects if name != object_name and name in self.objects)
+        return related
+
+    def _remove_object_from_constraints(self, object_name: str) -> None:
+        for constraint in self.constraints:
+            constraint.objects = [name for name in constraint.objects if name != object_name]
+        self.constraints = [constraint for constraint in self.constraints if constraint.objects]
+        self._rebuild_constraints_tree()
+
     def _on_tree_selection_changed(self) -> None:
         items = self.tree.selectedItems()
         if not items:
@@ -819,6 +1088,8 @@ class HexapodModeler(QMainWindow):
             spin.setValue(value)
         for spin, value in zip(self.rotation_spins, obj.rotation):
             spin.setValue(value)
+        self.fixed_absolute_checkbox.setChecked(obj.fixed_absolute)
+        self.rigid_group_edit.setText(obj.rigid_group)
         self._updating_controls = False
         self._set_controls_enabled(True)
 
@@ -828,14 +1099,32 @@ class HexapodModeler(QMainWindow):
         self.selected_feature_combo.setEnabled(enabled)
         self.target_feature_combo.setEnabled(enabled and self.target_combo.count() > 0)
         self.target_combo.setEnabled(enabled and self.target_combo.count() > 0)
+        self.fixed_absolute_checkbox.setEnabled(enabled)
+        self.rigid_group_edit.setEnabled(enabled)
+
+    def _on_fixed_absolute_changed(self) -> None:
+        if self._updating_controls or not self.selected_name:
+            return
+        self.objects[self.selected_name].fixed_absolute = self.fixed_absolute_checkbox.isChecked()
+
+    def _on_rigid_group_changed(self) -> None:
+        if self._updating_controls or not self.selected_name:
+            return
+        self.objects[self.selected_name].rigid_group = self.rigid_group_edit.text().strip()
 
     def _on_transform_changed(self) -> None:
         if self._updating_controls or not self.selected_name:
             return
         obj = self.objects[self.selected_name]
+        if obj.fixed_absolute:
+            self.coincidence_status.setText(f"Constraint: '{obj.name}' is fixed absolute and cannot be moved.")
+            self._load_selected_into_controls()
+            return
+        old_matrix = self._transform_matrix_for(self.selected_name)
         obj.position = [spin.value() for spin in self.position_spins]
         obj.rotation = [spin.value() for spin in self.rotation_spins]
         self._apply_transform(self.selected_name)
+        self._propagate_rigid_group_delta(self.selected_name, old_matrix)
         self.plotter.render()
 
     def _apply_transform(self, name: str) -> None:
@@ -859,6 +1148,24 @@ class HexapodModeler(QMainWindow):
         matrix[:3, 3] = obj.position
         return matrix
 
+    def _set_pose_from_matrix(self, name: str, matrix: np.ndarray) -> None:
+        obj = self.objects[name]
+        obj.position = [float(value) for value in matrix[:3, 3]]
+        obj.rotation = self._euler_degrees_from_rotation_matrix(matrix[:3, :3])
+        self._apply_transform(name)
+
+    def _propagate_rigid_group_delta(self, source_name: str, old_source_matrix: np.ndarray) -> None:
+        peers = self._rigid_component_for(source_name) - {source_name}
+        if not peers:
+            return
+
+        new_source_matrix = self._transform_matrix_for(source_name)
+        delta_matrix = new_source_matrix @ np.linalg.inv(old_source_matrix)
+        for name in peers:
+            obj = self.objects[name]
+            if obj.fixed_absolute:
+                continue
+            self._set_pose_from_matrix(name, delta_matrix @ self._transform_matrix_for(name))
     def _world_bounds_for(self, name: str) -> tuple[float, float, float, float, float, float]:
         mesh = self.meshes[name]
         xmin, xmax, ymin, ymax, zmin, zmax = mesh.bounds
@@ -950,15 +1257,26 @@ class HexapodModeler(QMainWindow):
         self.plotter.render()
 
     def _highlight_selected(self) -> None:
+        related = self._related_objects_for(self.selected_name) if self.selected_name else set()
         for name, actor in self.actors.items():
-            actor.prop.color = "#58a6ff" if name == self.selected_name else "#c9d1d9"
+            if name == self.selected_name:
+                actor.prop.color = "#58a6ff"
+            elif name in related:
+                actor.prop.color = "#ff9f1c"
+            else:
+                actor.prop.color = "#c9d1d9"
         self.plotter.render()
 
     def move_selected_to_origin(self) -> None:
         if not self.selected_name:
             return
+        if self.objects[self.selected_name].fixed_absolute:
+            self.coincidence_status.setText(f"Constraint: '{self.selected_name}' is fixed absolute and cannot be moved.")
+            return
+        old_matrix = self._transform_matrix_for(self.selected_name)
         self.objects[self.selected_name].position = [0.0, 0.0, 0.0]
         self._apply_transform(self.selected_name)
+        self._propagate_rigid_group_delta(self.selected_name, old_matrix)
         self._load_selected_into_controls()
         self.plotter.render()
 
@@ -972,6 +1290,7 @@ class HexapodModeler(QMainWindow):
         self.mesh_topologies.pop(name, None)
         self.actors.pop(name, None)
         self.coincidence_picks = [pick for pick in self.coincidence_picks if pick.object_name != name]
+        self._remove_object_from_constraints(name)
         if self.last_coincidence and name in {self.last_coincidence[0].object_name, self.last_coincidence[1].object_name}:
             self.last_coincidence = None
             self.reverse_coincidence_button.setEnabled(False)
@@ -991,7 +1310,11 @@ class HexapodModeler(QMainWindow):
         file_path, _ = QFileDialog.getSaveFileName(self, "Save layout", "hexapod_scene.json", "JSON (*.json)")
         if not file_path:
             return
-        data = [asdict(obj) for obj in self.objects.values()]
+        data = {
+            "format_version": 2,
+            "objects": [asdict(obj) for obj in self.objects.values()],
+            "constraints": [asdict(constraint) for constraint in self.constraints],
+        }
         Path(file_path).write_text(json.dumps(data, indent=2), encoding="utf-8")
 
     def load_layout(self) -> None:
@@ -999,12 +1322,18 @@ class HexapodModeler(QMainWindow):
         if not file_path:
             return
         data = json.loads(Path(file_path).read_text(encoding="utf-8"))
+        object_data = data if isinstance(data, list) else data.get("objects", [])
+        constraint_data = [] if isinstance(data, list) else data.get("constraints", [])
+
         self.clear_scene()
-        for raw in data:
+        name_map: dict[str, str] = {}
+        for raw in object_data:
             obj = SceneObject(**raw)
+            original_name = obj.name
             path = Path(obj.file_path)
             mesh = self._load_mesh(path)
             obj.name = self._unique_name(obj.name)
+            name_map[original_name] = obj.name
             self.objects[obj.name] = obj
             self.meshes[obj.name] = mesh
             self.mesh_topologies[obj.name] = self._build_mesh_topology(mesh)
@@ -1013,6 +1342,23 @@ class HexapodModeler(QMainWindow):
             item = QTreeWidgetItem([obj.name])
             item.setData(0, Qt.UserRole, obj.name)
             self.tree.addTopLevelItem(item)
+
+        self.constraints.clear()
+        self.next_constraint_id = 1
+        for raw in constraint_data:
+            remapped_objects = [name_map.get(name, name) for name in raw.get("objects", []) if name_map.get(name, name) in self.objects]
+            constraint = ConstraintRecord(
+                id=int(raw.get("id", self.next_constraint_id)),
+                type=raw.get("type", "other"),
+                name=raw.get("name", "Constraint"),
+                objects=remapped_objects,
+                parameters=raw.get("parameters", {}),
+            )
+            self.constraints.append(constraint)
+            self.next_constraint_id = max(self.next_constraint_id, constraint.id + 1)
+            self._apply_constraint_record(constraint)
+
+        self._rebuild_constraints_tree()
         self._refresh_alignment_targets()
         self.plotter.reset_camera()
 
@@ -1024,6 +1370,9 @@ class HexapodModeler(QMainWindow):
         self.mesh_topologies.clear()
         self.actors.clear()
         self.tree.clear()
+        self.constraints.clear()
+        self.next_constraint_id = 1
+        self.constraints_tree.clear()
         self.selected_name = None
         self.coincidence_picks.clear()
         self.last_coincidence = None
@@ -1043,6 +1392,20 @@ if __name__ == "__main__":
     window = HexapodModeler()
     window.show()
     sys.exit(app.exec())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
