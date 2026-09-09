@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QFormLayout,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
     QListWidget,
@@ -30,8 +31,10 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QSplitter,
     QTreeWidget,
+    QToolButton,
     QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
@@ -102,75 +105,111 @@ class ConstraintRecord:
 
 
 class AddConstraintDialog(QDialog):
-    def __init__(self, object_names: list[str], parent=None) -> None:
+    def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Add constraint")
-        self.resize(420, 480)
+        self.resize(430, 360)
 
         self.type_combo = QComboBox()
         self.type_combo.addItem("Absolute fixity", "absolute")
         self.type_combo.addItem("Relative rigid group", "relative")
         self.type_combo.addItem("Object to axis", "object_to_axis")
         self.type_combo.addItem("Object to plane", "object_to_plane")
+        self.type_combo.addItem("Parallel planes", "parallel_planes")
         self.type_combo.addItem("Other / placeholder", "other")
         self.type_combo.currentIndexChanged.connect(self._update_help_text)
 
         self.group_name = QLineEdit()
         self.group_name.setPlaceholderText("Optional group/constraint name")
 
-        self.object_list = QListWidget()
-        self.object_list.setSelectionMode(QAbstractItemView.MultiSelection)
-        for name in object_names:
-            QListWidgetItem(name, self.object_list)
+        self.fixed_distance_checkbox = QCheckBox("Fixed distance")
+        self.fixed_distance_checkbox.setVisible(False)
 
         self.help_label = QLabel()
         self.help_label.setWordWrap(True)
 
+        self.selection_list = QListWidget()
+        self.selection_list.setSelectionMode(QAbstractItemView.NoSelection)
+
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.ok_button = buttons.button(QDialogButtonBox.Ok)
+        self.ok_button.setEnabled(False)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
 
         form = QFormLayout()
         form.addRow("Type", self.type_combo)
         form.addRow("Name", self.group_name)
+        form.addRow(self.fixed_distance_checkbox)
 
         layout = QVBoxLayout(self)
         layout.addLayout(form)
-        layout.addWidget(QLabel("Objects"))
-        layout.addWidget(self.object_list)
         layout.addWidget(self.help_label)
+        layout.addWidget(QLabel("Current selection"))
+        layout.addWidget(self.selection_list)
         layout.addWidget(buttons)
         self._update_help_text()
 
     def selected_type(self) -> str:
         return self.type_combo.currentData()
 
-    def selected_objects(self) -> list[str]:
-        return [item.text() for item in self.object_list.selectedItems()]
-
     def entered_name(self) -> str:
         return self.group_name.text().strip()
 
-    def accept(self) -> None:
-        selected = self.selected_objects()
-        constraint_type = self.selected_type()
-        if constraint_type in {"absolute", "relative"} and not selected:
-            QMessageBox.information(self, "Add constraint", "Select at least one object.")
-            return
-        if constraint_type in {"object_to_axis", "object_to_plane"} and len(selected) != 2:
-            QMessageBox.information(self, "Add constraint", "Select exactly two objects for this first version.")
-            return
-        super().accept()
+    def fixed_distance(self) -> bool:
+        return self.fixed_distance_checkbox.isChecked()
+
+    def set_selection_summary(self, entries: list[str], can_accept: bool) -> None:
+        self.selection_list.clear()
+        for entry in entries:
+            QListWidgetItem(entry, self.selection_list)
+        self.ok_button.setEnabled(can_accept)
 
     def _update_help_text(self) -> None:
         help_by_type = {
-            "absolute": "Selected objects become fixed in world space.",
-            "relative": "Selected objects receive the same rigid group and move as one assembly.",
-            "object_to_axis": "First version records the relationship between two objects. Use direct Coincidence for picked axes.",
-            "object_to_plane": "First version records the relationship between two objects. Use direct Coincidence for picked planes.",
-            "other": "Placeholder for future joint, limit or servo-related constraints.",
+            "absolute": "After clicking OK, select one or more whole 3D objects directly in the viewport, then click Finish constraint.",
+            "relative": "After clicking OK, select the objects that must move as one rigid assembly, then click Finish constraint.",
+            "object_to_axis": "After clicking OK, click the constrained object, then click the target hole/cylindrical axis in the viewport.",
+            "object_to_plane": "After clicking OK, click the constrained object, then click the target plane in the viewport.",
+            "parallel_planes": "Select two planes on two different objects. Enable Fixed distance to keep the initial plane distance locked.",
+            "other": "After clicking OK, select one or more objects directly in the viewport, then validate with OK.",
         }
+        self.fixed_distance_checkbox.setVisible(self.selected_type() == "parallel_planes")
         self.help_label.setText(help_by_type[self.selected_type()])
+
+
+class CoincidenceDialog(QDialog):
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Coincidence")
+        self.resize(420, 260)
+
+        self.status_label = QLabel("Coincidence: inactive")
+        self.status_label.setWordWrap(True)
+        self.selection_list = QListWidget()
+        self.selection_list.setSelectionMode(QAbstractItemView.NoSelection)
+
+        self.clear_button = QPushButton("Clear coincidence picks")
+        self.reverse_button = QPushButton("Reverse coincidence")
+        self.close_button = QPushButton("Exit coincidence")
+        self.reverse_button.setEnabled(False)
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.status_label)
+        layout.addWidget(QLabel("Current picks"))
+        layout.addWidget(self.selection_list)
+        layout.addWidget(self.clear_button)
+        layout.addWidget(self.reverse_button)
+        layout.addWidget(self.close_button)
+
+    def set_status(self, text: str) -> None:
+        self.status_label.setText(text)
+
+    def set_picks(self, picks: list[PickedSurface]) -> None:
+        self.selection_list.clear()
+        for index, pick in enumerate(picks, start=1):
+            label = "Axis" if pick.feature_kind == "axis" else "Plane"
+            QListWidgetItem(f"{index}. {label}: {pick.object_name} ({len(pick.cell_ids)} cells)", self.selection_list)
 
 class HexapodModeler(QMainWindow):
     def __init__(self) -> None:
@@ -181,11 +220,18 @@ class HexapodModeler(QMainWindow):
         self.objects: dict[str, SceneObject] = {}
         self.constraints: list[ConstraintRecord] = []
         self.next_constraint_id = 1
+        self.constraint_dialog: Optional[AddConstraintDialog] = None
+        self.constraint_pick_mode = False
+        self.pending_constraint_type = ""
+        self.pending_constraint_name = ""
+        self.pending_constraint_objects: list[str] = []
+        self.pending_constraint_features: list[PickedSurface] = []
         self.meshes: dict[str, pv.PolyData] = {}
         self.mesh_topologies: dict[str, MeshTopology] = {}
         self.actors = {}
         self.selected_name: Optional[str] = None
         self.coincidence_mode = False
+        self.coincidence_dialog: Optional[CoincidenceDialog] = None
         self.coincidence_picks: list[PickedSurface] = []
         self.last_coincidence: Optional[tuple[PickedSurface, PickedSurface]] = None
         self.coincidence_orientation_sign = -1.0
@@ -194,8 +240,10 @@ class HexapodModeler(QMainWindow):
         self.pick_highlight_names: list[str] = []
         self.pick_boundary_names: list[str] = []
         self.hover_pick_signature: Optional[tuple[str, int, int]] = None
+        self.constraint_hover_object_name: Optional[str] = None
         self._updating_controls = False
         self._updating_alignment_controls = False
+        self._solving_constraints = False
         self.display_mode = "sharp"
         self.step_linear_tolerance = 0.02
         self.step_angular_tolerance = 0.05
@@ -222,13 +270,31 @@ class HexapodModeler(QMainWindow):
 
         self.plotter = QtInteractor(self)
         self.tree = QTreeWidget()
-        self.tree.setHeaderLabel("3D objects")
+        self.tree.setColumnCount(2)
+        self.tree.setHeaderLabels(["3D objects", ""])
+        self.tree.header().setStretchLastSection(False)
+        self.tree.header().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.tree.header().setSectionResizeMode(1, QHeaderView.Fixed)
+        self.tree.setColumnWidth(1, 24)
+        self.tree.setMinimumHeight(90)
         self.tree.itemSelectionChanged.connect(self._on_tree_selection_changed)
 
         self.constraints_tree = QTreeWidget()
-        self.constraints_tree.setHeaderLabel("Constraints")
+        self.constraints_tree.setColumnCount(2)
+        self.constraints_tree.setHeaderLabels(["Constraints", ""])
+        self.constraints_tree.header().setStretchLastSection(False)
+        self.constraints_tree.header().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.constraints_tree.header().setSectionResizeMode(1, QHeaderView.Fixed)
+        self.constraints_tree.setColumnWidth(1, 24)
+        self.constraints_tree.setMinimumHeight(90)
         add_constraint_button = QPushButton("Add constraint")
         add_constraint_button.clicked.connect(self.add_constraint)
+        self.finish_constraint_button = QPushButton("Finish constraint")
+        self.finish_constraint_button.setEnabled(False)
+        self.finish_constraint_button.clicked.connect(self.finish_constraint_picking)
+        self.cancel_constraint_button = QPushButton("Cancel constraint")
+        self.cancel_constraint_button.setEnabled(False)
+        self.cancel_constraint_button.clicked.connect(self.cancel_constraint_picking)
 
         self.position_spins = [self._make_spinbox(-10000, 10000, 0.1) for _ in range(3)]
         self.rotation_spins = [self._make_spinbox(-360, 360, 0.1) for _ in range(3)]
@@ -274,8 +340,6 @@ class HexapodModeler(QMainWindow):
         self.coincidence_button = QPushButton("Coincidence")
         self.coincidence_button.setCheckable(True)
         self.coincidence_button.clicked.connect(self.toggle_coincidence_mode)
-        clear_picks_button = QPushButton("Clear coincidence picks")
-        clear_picks_button.clicked.connect(self.clear_coincidence_picks)
         self.reverse_coincidence_button = QPushButton("Reverse coincidence")
         self.reverse_coincidence_button.setEnabled(False)
         self.reverse_coincidence_button.clicked.connect(self.reverse_last_coincidence)
@@ -293,27 +357,57 @@ class HexapodModeler(QMainWindow):
         self.target_feature_combo.setEnabled(False)
 
 
-        side_panel = QWidget()
-        side_layout = QVBoxLayout(side_panel)
-        side_layout.addWidget(QLabel("Scene tree"))
-        side_layout.addWidget(self.tree, stretch=2)
-        side_layout.addWidget(QLabel("Constraints"))
-        side_layout.addWidget(self.constraints_tree, stretch=1)
-        side_layout.addWidget(add_constraint_button)
-        side_layout.addLayout(transform_form)
-        side_layout.addWidget(zero_button)
-        side_layout.addWidget(remove_button)
-        side_layout.addLayout(constraints_form)
-        side_layout.addWidget(QLabel("Direct face constraint"))
-        side_layout.addWidget(self.coincidence_button)
-        side_layout.addWidget(clear_picks_button)
-        side_layout.addWidget(self.reverse_coincidence_button)
-        side_layout.addWidget(self.coincidence_status)
+        scene_tree_panel = QWidget()
+        scene_tree_layout = QVBoxLayout(scene_tree_panel)
+        scene_tree_layout.setContentsMargins(12, 8, 10, 8)
+        scene_tree_layout.addWidget(QLabel("Scene tree"))
+        scene_tree_layout.addWidget(self.tree)
+
+        constraints_tree_panel = QWidget()
+        constraints_tree_layout = QVBoxLayout(constraints_tree_panel)
+        constraints_tree_layout.setContentsMargins(12, 8, 10, 8)
+        constraints_tree_layout.addWidget(QLabel("Constraints"))
+        constraints_tree_layout.addWidget(self.constraints_tree)
+        constraints_tree_layout.addWidget(add_constraint_button)
+
+        controls_panel = QWidget()
+        controls_layout = QVBoxLayout(controls_panel)
+        controls_layout.setContentsMargins(12, 8, 10, 8)
+        controls_layout.addLayout(transform_form)
+        controls_layout.addWidget(zero_button)
+        controls_layout.addWidget(remove_button)
+        controls_layout.addWidget(self.coincidence_button)
+        controls_layout.addWidget(self.coincidence_status)
+        controls_layout.addStretch(1)
+        scene_tree_panel.setMinimumHeight(120)
+        constraints_tree_panel.setMinimumHeight(120)
+        controls_panel.setMinimumHeight(220)
+
+        side_panel = QSplitter(Qt.Vertical)
+        side_panel.setHandleWidth(10)
+        side_panel.setOpaqueResize(True)
+        side_panel.setChildrenCollapsible(False)
+        side_panel.setStyleSheet("QSplitter::handle:vertical { background: #343a42; margin: 3px 18px; border-radius: 2px; }")
+        side_panel.addWidget(scene_tree_panel)
+        side_panel.addWidget(constraints_tree_panel)
+        side_panel.addWidget(controls_panel)
+        side_panel.setStretchFactor(0, 1)
+        side_panel.setStretchFactor(1, 1)
+        side_panel.setStretchFactor(2, 1)
+        side_panel.setSizes([260, 260, 360])
 
 
         splitter = QSplitter(Qt.Horizontal)
+        splitter.setHandleWidth(10)
+        splitter.setStyleSheet("QSplitter::handle:horizontal { background: #30363d; margin: 0 2px; }")
+        side_scroll = QScrollArea()
+        side_scroll.setWidgetResizable(True)
+        side_scroll.setFrameShape(QScrollArea.NoFrame)
+        side_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        side_scroll.setWidget(side_panel)
+
         splitter.addWidget(self.plotter)
-        splitter.addWidget(side_panel)
+        splitter.addWidget(side_scroll)
         splitter.setStretchFactor(0, 5)
         splitter.setStretchFactor(1, 1)
         splitter.setSizes([1080, 370])
@@ -369,9 +463,7 @@ class HexapodModeler(QMainWindow):
         self.mesh_topologies[name] = self._build_mesh_topology(mesh)
         self.actors[name] = self._add_mesh_actor(name, mesh)
         self._apply_transform(name)
-        item = QTreeWidgetItem([name])
-        item.setData(0, Qt.UserRole, name)
-        self.tree.addTopLevelItem(item)
+        item = self._add_scene_tree_item(name)
         self.tree.setCurrentItem(item)
         self._refresh_alignment_targets()
         self.plotter.reset_camera()
@@ -469,9 +561,13 @@ class HexapodModeler(QMainWindow):
         return candidate
 
     def _on_mouse_move(self, obj, event) -> None:
-        if not self.coincidence_mode:
-            self._clear_hover_highlight()
+        if self.constraint_pick_mode:
+            self._update_constraint_hover()
             return
+        if not self.coincidence_mode:
+            self._update_object_hover()
+            return
+        self.constraint_hover_object_name = None
         picked = self._pick_surface_at_current_mouse_position()
         if picked is None:
             self._clear_hover_highlight()
@@ -481,11 +577,15 @@ class HexapodModeler(QMainWindow):
             self._show_hover_highlight(picked)
 
     def _on_left_button_press(self, obj, event) -> None:
+        if self.constraint_pick_mode:
+            self._handle_constraint_pick_click()
+            return
         if not self.coincidence_mode:
+            self._select_object_from_viewport()
             return
         picked = self._pick_surface_at_current_mouse_position()
         if picked is None:
-            self.coincidence_status.setText("Coincidence: click on a model surface.")
+            self._set_coincidence_status("Coincidence: click on a model surface.")
             return
         self.coincidence_picks.append(picked)
         self._add_pick_highlight(picked)
@@ -497,7 +597,34 @@ class HexapodModeler(QMainWindow):
             self.last_coincidence = (self.coincidence_picks[0], self.coincidence_picks[1])
             self.coincidence_orientation_sign = self._minimal_rotation_orientation_sign(*self.last_coincidence)
             self.reverse_coincidence_button.setEnabled(True)
+            self._refresh_coincidence_dialog()
             self._apply_direct_plane_coincidence(*self.last_coincidence)
+
+    def _update_object_hover(self) -> None:
+        self._clear_hover_highlight(render=False)
+        object_name = self._pick_object_name_at_current_mouse_position()
+        if object_name != self.constraint_hover_object_name:
+            self.constraint_hover_object_name = object_name
+            self._highlight_selected()
+
+    def _select_object_from_viewport(self) -> None:
+        object_name = self._pick_object_name_at_current_mouse_position()
+        if object_name is None:
+            self._clear_object_selection()
+            return
+        self.selected_name = object_name
+        self._select_tree_item(object_name)
+        self._load_selected_into_controls()
+        self._highlight_selected()
+        self._refresh_alignment_targets()
+
+    def _clear_object_selection(self) -> None:
+        self.selected_name = None
+        self.constraint_hover_object_name = None
+        self.tree.clearSelection()
+        self._set_controls_enabled(False)
+        self._refresh_alignment_targets()
+        self._highlight_selected()
 
     def _pick_surface_at_current_mouse_position(self) -> Optional[PickedSurface]:
         click_x, click_y = self._vtk_interactor().GetEventPosition()
@@ -756,12 +883,60 @@ class HexapodModeler(QMainWindow):
             self.plotter.render()
 
     def toggle_coincidence_mode(self) -> None:
-        self.coincidence_mode = self.coincidence_button.isChecked()
-        self.clear_coincidence_picks(keep_mode=True)
+        if self.constraint_pick_mode:
+            self._reset_constraint_picking(clear_highlights=True, close_dialog=True)
         if self.coincidence_mode:
-            self.coincidence_status.setText("Coincidence: hover a surface, then click the moving surface and the target surface.")
-        else:
-            self.coincidence_status.setText("Coincidence: inactive")
+            self.exit_coincidence_mode()
+            return
+        self.coincidence_mode = True
+        self.coincidence_button.setChecked(True)
+        self.clear_coincidence_picks(keep_mode=True)
+        self._show_coincidence_dialog()
+        self._set_coincidence_status("Coincidence: hover a surface or axis, then click the moving feature and the target feature.")
+
+    def _show_coincidence_dialog(self) -> None:
+        if self.coincidence_dialog is not None:
+            self.coincidence_dialog.raise_()
+            self.coincidence_dialog.activateWindow()
+            return
+        dialog = CoincidenceDialog(self)
+        self.coincidence_dialog = dialog
+        dialog.clear_button.clicked.connect(lambda: self.clear_coincidence_picks(keep_mode=True))
+        dialog.reverse_button.clicked.connect(self.reverse_last_coincidence)
+        dialog.close_button.clicked.connect(self.exit_coincidence_mode)
+        dialog.rejected.connect(self.exit_coincidence_mode)
+        dialog.destroyed.connect(lambda: self._clear_coincidence_dialog_reference(dialog))
+        dialog.show()
+        dialog.raise_()
+        dialog.activateWindow()
+        self._refresh_coincidence_dialog()
+
+    def _clear_coincidence_dialog_reference(self, dialog: CoincidenceDialog) -> None:
+        if self.coincidence_dialog is dialog:
+            self.coincidence_dialog = None
+
+    def _set_coincidence_status(self, text: str) -> None:
+        self.coincidence_status.setText(text)
+        if self.coincidence_dialog is not None:
+            self.coincidence_dialog.set_status(text)
+
+    def _refresh_coincidence_dialog(self) -> None:
+        if self.coincidence_dialog is None:
+            return
+        self.coincidence_dialog.set_picks(self.coincidence_picks)
+        self.coincidence_dialog.reverse_button.setEnabled(self.last_coincidence is not None)
+
+    def exit_coincidence_mode(self) -> None:
+        dialog = self.coincidence_dialog
+        self.coincidence_dialog = None
+        self.coincidence_mode = False
+        self.coincidence_button.setChecked(False)
+        self.clear_coincidence_picks(keep_mode=False)
+        if dialog is not None:
+            dialog.blockSignals(True)
+            dialog.reject()
+            dialog.blockSignals(False)
+        self._set_coincidence_status("Coincidence: inactive")
 
     def clear_coincidence_picks(self, keep_mode: bool = False) -> None:
         self.coincidence_picks.clear()
@@ -770,26 +945,30 @@ class HexapodModeler(QMainWindow):
         if not keep_mode:
             self.coincidence_mode = False
             self.coincidence_button.setChecked(False)
-            self.coincidence_status.setText("Coincidence: inactive")
+            self._set_coincidence_status("Coincidence: inactive")
         elif self.coincidence_mode:
-            self.coincidence_status.setText("Coincidence: hover a surface, then click the moving surface and the target surface.")
+            self._set_coincidence_status("Coincidence: hover a surface or axis, then click the moving feature and the target feature.")
+        self._refresh_coincidence_dialog()
         self.plotter.render()
 
     def _update_coincidence_status(self) -> None:
         count = len(self.coincidence_picks)
         if count == 1:
             first = self.coincidence_picks[0]
-            self.coincidence_status.setText(f"Coincidence: first surface selected on '{first.object_name}' ({len(first.cell_ids)} triangles). Click target surface.")
+            label = "axis" if first.feature_kind == "axis" else "surface"
+            self._set_coincidence_status(f"Coincidence: first {label} selected on '{first.object_name}' ({len(first.cell_ids)} triangles). Click target feature.")
         elif count == 2:
             first, second = self.coincidence_picks
-            self.coincidence_status.setText(f"Coincidence: aligning '{first.object_name}' to '{second.object_name}'.")
+            self._set_coincidence_status(f"Coincidence: aligning '{first.object_name}' to '{second.object_name}'.")
+        self._refresh_coincidence_dialog()
 
     def reverse_last_coincidence(self) -> None:
         if self.last_coincidence is None:
             return
         self.coincidence_orientation_sign *= -1.0
         self._apply_direct_plane_coincidence(*self.last_coincidence, clear_selection=False)
-        self.coincidence_status.setText("Coincidence: reversed last orientation.")
+        self._set_coincidence_status("Coincidence: reversed last orientation.")
+        self._refresh_coincidence_dialog()
 
     def _minimal_rotation_orientation_sign(self, moving: PickedSurface, target: PickedSurface) -> float:
         if moving.feature_kind == "axis" and target.feature_kind == "axis":
@@ -802,7 +981,7 @@ class HexapodModeler(QMainWindow):
         return 1.0 if float(np.dot(moving_normal, target_normal)) >= 0.0 else -1.0
     def _apply_direct_plane_coincidence(self, moving: PickedSurface, target: PickedSurface, clear_selection: bool = True) -> None:
         if moving.object_name == target.object_name:
-            self.coincidence_status.setText("Coincidence: choose two different objects.")
+            self._set_coincidence_status("Coincidence: choose two different objects.")
             self.coincidence_picks.clear()
             self._clear_pick_highlights()
             return
@@ -811,13 +990,13 @@ class HexapodModeler(QMainWindow):
             self._apply_axis_coincidence(moving, target, clear_selection)
             return
         if moving.feature_kind != target.feature_kind:
-            self.coincidence_status.setText("Coincidence: surface-to-axis constraints are not supported yet.")
+            self._set_coincidence_status("Coincidence: surface-to-axis constraints are not supported yet.")
             self.coincidence_picks.clear()
             self._clear_pick_highlights()
             return
 
         if self.objects[moving.object_name].fixed_absolute:
-            self.coincidence_status.setText(f"Constraint: '{moving.object_name}' is fixed absolute and cannot be moved.")
+            self._set_coincidence_status(f"Constraint: '{moving.object_name}' is fixed absolute and cannot be moved.")
             self.coincidence_picks.clear()
             self._clear_pick_highlights()
             return
@@ -848,12 +1027,12 @@ class HexapodModeler(QMainWindow):
         if clear_selection:
             self.coincidence_picks.clear()
             self._clear_pick_highlights(render=False)
-        self.coincidence_status.setText(f"Coincidence: '{moving.object_name}' moved onto '{target.object_name}'.")
+        self._set_coincidence_status(f"Coincidence: '{moving.object_name}' moved onto '{target.object_name}'.")
         self.plotter.render()
 
     def _apply_axis_coincidence(self, moving: PickedSurface, target: PickedSurface, clear_selection: bool = True) -> None:
         if self.objects[moving.object_name].fixed_absolute:
-            self.coincidence_status.setText(f"Constraint: '{moving.object_name}' is fixed absolute and cannot be moved.")
+            self._set_coincidence_status(f"Constraint: '{moving.object_name}' is fixed absolute and cannot be moved.")
             self.coincidence_picks.clear()
             self._clear_pick_highlights()
             return
@@ -884,7 +1063,7 @@ class HexapodModeler(QMainWindow):
         if clear_selection:
             self.coincidence_picks.clear()
             self._clear_pick_highlights(render=False)
-        self.coincidence_status.setText(f"Coincidence: axis of '{moving.object_name}' aligned to axis of '{target.object_name}'.")
+        self._set_coincidence_status(f"Coincidence: axis of '{moving.object_name}' aligned to axis of '{target.object_name}'.")
         self.plotter.render()
     def _rotation_between_vectors(self, source: np.ndarray, target: np.ndarray) -> np.ndarray:
         source = source / np.linalg.norm(source)
@@ -921,6 +1100,28 @@ class HexapodModeler(QMainWindow):
             rz = 0.0
         return [math.degrees(rx), math.degrees(ry), math.degrees(rz)]
 
+    def _add_scene_tree_item(self, name: str) -> QTreeWidgetItem:
+        item = QTreeWidgetItem([name, ""])
+        item.setData(0, Qt.UserRole, name)
+        self.tree.addTopLevelItem(item)
+        self.tree.setItemWidget(item, 1, self._scene_tree_delete_button(name))
+        return item
+
+    def _scene_tree_delete_button(self, name: str) -> QToolButton:
+        delete_button = self._make_delete_button("Delete model")
+        delete_button.clicked.connect(lambda _checked=False, object_name=name: self.remove_model(object_name))
+        return delete_button
+    def _make_delete_button(self, tooltip: str) -> QToolButton:
+        button = QToolButton()
+        button.setText("✕")
+        button.setToolTip(tooltip)
+        button.setAutoRaise(True)
+        button.setFixedSize(18, 18)
+        button.setStyleSheet(
+            "QToolButton { border: none; color: #8b949e; font-size: 11px; font-weight: 600; padding: 0; }"
+            "QToolButton:hover { color: #ff7b72; background: rgba(248, 81, 73, 0.12); border-radius: 9px; }"
+        )
+        return button
     def _select_tree_item(self, name: str) -> None:
         for index in range(self.tree.topLevelItemCount()):
             item = self.tree.topLevelItem(index)
@@ -932,45 +1133,302 @@ class HexapodModeler(QMainWindow):
         if not self.objects:
             QMessageBox.information(self, "Add constraint", "Import at least one 3D object first.")
             return
-
-        dialog = AddConstraintDialog(list(self.objects.keys()), self)
-        if dialog.exec() != QDialog.Accepted:
+        if self.constraint_dialog is not None:
+            self.constraint_dialog.raise_()
+            self.constraint_dialog.activateWindow()
             return
 
-        constraint_type = dialog.selected_type()
-        objects = dialog.selected_objects()
-        name = dialog.entered_name() or self._default_constraint_name(constraint_type)
+        dialog = AddConstraintDialog(self)
+        self.constraint_dialog = dialog
+        dialog.type_combo.currentIndexChanged.connect(lambda _index: self._on_constraint_dialog_changed(reset_selection=True))
+        dialog.group_name.textChanged.connect(lambda _text: self._on_constraint_dialog_changed(reset_selection=False))
+        dialog.fixed_distance_checkbox.stateChanged.connect(lambda _state: self._on_constraint_dialog_changed(reset_selection=False))
+        dialog.accepted.connect(self.finish_constraint_picking)
+        dialog.rejected.connect(lambda: self._reset_constraint_picking(clear_highlights=True, close_dialog=False))
+        dialog.destroyed.connect(lambda: self._clear_constraint_dialog_reference(dialog))
+        self._begin_constraint_picking(dialog.selected_type(), dialog.entered_name())
+        dialog.show()
+        dialog.raise_()
+        dialog.activateWindow()
+
+    def _clear_constraint_dialog_reference(self, dialog: AddConstraintDialog) -> None:
+        if self.constraint_dialog is dialog:
+            self.constraint_dialog = None
+
+    def _begin_constraint_picking(self, constraint_type: str, name: str) -> None:
+        if self.coincidence_mode:
+            self.clear_coincidence_picks(keep_mode=False)
+        self.constraint_pick_mode = True
+        self.pending_constraint_type = constraint_type
+        self.pending_constraint_name = name
+        self.pending_constraint_objects.clear()
+        self.pending_constraint_features.clear()
+        self.constraint_hover_object_name = None
+        self._clear_hover_highlight(render=False)
+        self._clear_pick_highlights(render=False)
+        self.finish_constraint_button.setEnabled(False)
+        self.cancel_constraint_button.setEnabled(True)
+        self._refresh_constraint_dialog_state()
+        self._highlight_selected()
+
+    def _on_constraint_dialog_changed(self, reset_selection: bool) -> None:
+        if self.constraint_dialog is None:
+            return
+        self.pending_constraint_type = self.constraint_dialog.selected_type()
+        self.pending_constraint_name = self.constraint_dialog.entered_name()
+        if reset_selection:
+            self.pending_constraint_objects.clear()
+            self.pending_constraint_features.clear()
+            self.constraint_hover_object_name = None
+            self._clear_hover_highlight(render=False)
+            self._clear_pick_highlights(render=False)
+            self._highlight_selected()
+        self._refresh_constraint_dialog_state()
+
+    def _constraint_pick_instruction(self) -> str:
+        if self.pending_constraint_type in {"absolute", "relative", "other"}:
+            count = len(self.pending_constraint_objects)
+            return f"Constraint pick: click whole 3D objects ({count} selected). OK enables when at least one object is selected."
+        if self.pending_constraint_type == "object_to_axis":
+            if not self.pending_constraint_objects:
+                return "Constraint pick: click the constrained 3D object."
+            if not self.pending_constraint_features:
+                return f"Constraint pick: constrained object is '{self.pending_constraint_objects[0]}'. Click a target axis; clicking another plain object replaces the constrained object."
+            return "Constraint pick: object and axis selected. OK is enabled; click another object or axis to replace the current choice."
+        if self.pending_constraint_type == "object_to_plane":
+            if not self.pending_constraint_objects:
+                return "Constraint pick: click the constrained 3D object."
+            if not self.pending_constraint_features:
+                return f"Constraint pick: constrained object is '{self.pending_constraint_objects[0]}'. Click the target plane."
+            return "Constraint pick: object and plane selected. OK is enabled; click another plane to replace the current target."
+        if self.pending_constraint_type == "parallel_planes":
+            count = len(self.pending_constraint_features)
+            return f"Constraint pick: click two planes on two different objects ({count}/2 selected). OK enables when both planes are valid."
+        return "Constraint pick: select elements in the 3D view."
+
+    def _required_pending_feature_kind(self) -> Optional[str]:
+        if self.pending_constraint_type == "object_to_axis":
+            return "axis"
+        if self.pending_constraint_type in {"object_to_plane", "parallel_planes"}:
+            return "surface"
+        return None
+
+    def _refresh_constraint_dialog_state(self) -> None:
+        can_accept = self._pending_constraint_is_valid()
+        self.finish_constraint_button.setEnabled(can_accept)
+        self.cancel_constraint_button.setEnabled(self.constraint_pick_mode)
+        if self.constraint_dialog is not None:
+            self.constraint_dialog.set_selection_summary(self._pending_constraint_entries(), can_accept)
+        self.coincidence_status.setText(self._constraint_pick_instruction())
+
+    def _pending_constraint_is_valid(self) -> bool:
+        if self.pending_constraint_type in {"absolute", "relative", "other"}:
+            return bool(self.pending_constraint_objects)
+        if self.pending_constraint_type in {"object_to_axis", "object_to_plane"}:
+            return bool(self.pending_constraint_objects and self.pending_constraint_features)
+        if self.pending_constraint_type == "parallel_planes":
+            feature_objects = {feature.object_name for feature in self.pending_constraint_features}
+            return len(self.pending_constraint_features) == 2 and len(feature_objects) == 2
+        return False
+
+    def _pending_constraint_entries(self) -> list[str]:
+        entries = [f"Object: {name}" for name in self.pending_constraint_objects]
+        for feature in self.pending_constraint_features:
+            label = "Axis" if feature.feature_kind == "axis" else "Plane"
+            entries.append(f"{label}: {feature.object_name} ({len(feature.cell_ids)} cells)")
+        return entries
+
+    def _update_constraint_hover(self) -> None:
+        required_kind = self._required_pending_feature_kind()
+        needs_object_hover = required_kind is None or (not self.pending_constraint_objects and self.pending_constraint_type != "parallel_planes")
+        if needs_object_hover:
+            self._clear_hover_highlight(render=False)
+            object_name = self._pick_object_name_at_current_mouse_position()
+            if object_name != self.constraint_hover_object_name:
+                self.constraint_hover_object_name = object_name
+                self._highlight_selected()
+            return
+
+        picked = self._pick_surface_at_current_mouse_position()
+        if picked is None:
+            self._clear_hover_highlight()
+            if self.constraint_hover_object_name is not None:
+                self.constraint_hover_object_name = None
+                self._highlight_selected()
+            return
+        if picked.feature_kind == required_kind:
+            if self.constraint_hover_object_name is not None:
+                self.constraint_hover_object_name = None
+                self._highlight_selected()
+            signature = (picked.object_name, picked.cell_id, len(picked.cell_ids))
+            if signature != self.hover_pick_signature:
+                self._show_hover_highlight(picked)
+            return
+
+        self._clear_hover_highlight(render=False)
+        object_name = picked.object_name if self.pending_constraint_type == "object_to_axis" else None
+        if object_name != self.constraint_hover_object_name:
+            self.constraint_hover_object_name = object_name
+            self._highlight_selected()
+
+    def _pick_object_name_at_current_mouse_position(self) -> Optional[str]:
+        click_x, click_y = self._vtk_interactor().GetEventPosition()
+        self.cell_picker.Pick(click_x, click_y, 0, self.plotter.renderer)
+        actor = self.cell_picker.GetActor()
+        cell_id = self.cell_picker.GetCellId()
+        if cell_id < 0:
+            return None
+        return self._object_name_for_actor(actor)
+
+    def _handle_constraint_pick_click(self) -> None:
+        if self.pending_constraint_type in {"absolute", "relative", "other"}:
+            self._handle_object_set_constraint_click()
+            return
+        if self.pending_constraint_type == "parallel_planes":
+            self._handle_parallel_planes_constraint_click()
+            return
+        self._handle_object_to_feature_constraint_click()
+
+    def _handle_object_set_constraint_click(self) -> None:
+        object_name = self._pick_object_name_at_current_mouse_position()
+        if object_name is None:
+            self.coincidence_status.setText("Constraint pick: click directly on a 3D object.")
+            return
+        if object_name in self.pending_constraint_objects:
+            self.pending_constraint_objects.remove(object_name)
+        else:
+            self.pending_constraint_objects.append(object_name)
+        self.selected_name = object_name
+        self._select_tree_item(object_name)
+        self._highlight_selected()
+        self._refresh_constraint_dialog_state()
+
+    def _handle_parallel_planes_constraint_click(self) -> None:
+        picked = self._pick_surface_at_current_mouse_position()
+        if picked is None or picked.feature_kind != "surface":
+            self.coincidence_status.setText("Constraint pick: Parallel planes needs planar surface selections.")
+            return
+        if self.pending_constraint_features and picked.object_name == self.pending_constraint_features[0].object_name:
+            self.pending_constraint_features[0] = picked
+        elif len(self.pending_constraint_features) < 2:
+            self.pending_constraint_features.append(picked)
+        else:
+            self.pending_constraint_features[1] = picked
+        self.pending_constraint_objects = []
+        for feature in self.pending_constraint_features:
+            if feature.object_name not in self.pending_constraint_objects:
+                self.pending_constraint_objects.append(feature.object_name)
+        self._clear_pick_highlights(render=False)
+        for feature in self.pending_constraint_features:
+            self._add_pick_highlight(feature)
+        self.selected_name = picked.object_name
+        self._select_tree_item(picked.object_name)
+        self._highlight_selected()
+        self._refresh_constraint_dialog_state()
+    def _handle_object_to_feature_constraint_click(self) -> None:
+        required_kind = self._required_pending_feature_kind()
+        if not self.pending_constraint_objects:
+            self._replace_pending_constrained_object_from_click()
+            return
+
+        picked = self._pick_surface_at_current_mouse_position()
+        if picked is not None and picked.feature_kind == required_kind:
+            self.pending_constraint_features = [picked]
+            self._clear_pick_highlights(render=False)
+            self._add_pick_highlight(picked)
+            self._refresh_constraint_dialog_state()
+            return
+
+        if self.pending_constraint_type == "object_to_axis":
+            self._replace_pending_constrained_object_from_click()
+            return
+
+        self.coincidence_status.setText("Constraint pick: click a compatible target feature for this constraint.")
+
+    def _replace_pending_constrained_object_from_click(self) -> None:
+        object_name = self._pick_object_name_at_current_mouse_position()
+        if object_name is None:
+            self.coincidence_status.setText("Constraint pick: click the constrained 3D object first.")
+            return
+        self.pending_constraint_objects = [object_name]
+        self.pending_constraint_features.clear()
+        self._clear_pick_highlights(render=False)
+        self.selected_name = object_name
+        self._select_tree_item(object_name)
+        self._highlight_selected()
+        self._refresh_constraint_dialog_state()
+
+    def finish_constraint_picking(self) -> None:
+        if not self.constraint_pick_mode:
+            return
+        if not self._pending_constraint_is_valid():
+            QMessageBox.information(self, "Add constraint", "The current viewport selection is not complete for this constraint type.")
+            self._refresh_constraint_dialog_state()
+            return
+
+        objects = list(self.pending_constraint_objects)
+        for feature in self.pending_constraint_features:
+            if feature.object_name not in objects:
+                objects.append(feature.object_name)
         constraint = ConstraintRecord(
             id=self.next_constraint_id,
-            type=constraint_type,
-            name=name,
+            type=self.pending_constraint_type,
+            name=self.pending_constraint_name or self._default_constraint_name(self.pending_constraint_type),
             objects=objects,
-            parameters=self._constraint_parameters_from_recent_picks(constraint_type, objects),
+            parameters=self._pending_constraint_parameters(),
         )
         self.next_constraint_id += 1
         self.constraints.append(constraint)
         self._apply_constraint_record(constraint)
         self._rebuild_constraints_tree()
+        self._reset_constraint_picking(clear_highlights=True, close_dialog=self.sender() is self.finish_constraint_button)
         self._highlight_selected()
 
-    def _constraint_parameters_from_recent_picks(self, constraint_type: str, objects: list[str]) -> dict:
-        if constraint_type not in {"object_to_axis", "object_to_plane"}:
-            return {}
-        if not self.last_coincidence:
-            return {"status": "recorded", "note": "No recent picked geometry was available."}
+    def cancel_constraint_picking(self) -> None:
+        if not self.constraint_pick_mode:
+            return
+        self._reset_constraint_picking(clear_highlights=True, close_dialog=True)
+        self.coincidence_status.setText("Constraint pick: cancelled.")
+        self._highlight_selected()
 
-        expected_kind = "axis" if constraint_type == "object_to_axis" else "surface"
-        picked_features = [pick for pick in self.last_coincidence if pick.object_name in objects]
-        matching_features = [pick for pick in picked_features if pick.feature_kind == expected_kind]
-        parameters = {
-            "status": "recorded",
-            "picked_features": [self._serialize_pick_for_constraint(pick) for pick in picked_features],
-        }
-        if matching_features:
-            parameters["status"] = "linked_to_recent_coincidence"
-        else:
-            parameters["note"] = f"Recent Coincidence picks did not include a {expected_kind} feature."
-        return parameters
+    def _reset_constraint_picking(self, clear_highlights: bool, close_dialog: bool = False) -> None:
+        dialog = self.constraint_dialog
+        self.constraint_dialog = None
+        self.constraint_pick_mode = False
+        self.pending_constraint_type = ""
+        self.pending_constraint_name = ""
+        self.pending_constraint_objects.clear()
+        self.pending_constraint_features.clear()
+        self.constraint_hover_object_name = None
+        self.finish_constraint_button.setEnabled(False)
+        self.cancel_constraint_button.setEnabled(False)
+        self._clear_hover_highlight(render=False)
+        if clear_highlights:
+            self._clear_pick_highlights(render=False)
+        if close_dialog and dialog is not None:
+            dialog.reject()
+        self.plotter.render()
+
+    def _pending_constraint_parameters(self) -> dict:
+        if self.pending_constraint_type == "relative":
+            return {"rigid_group": self.pending_constraint_name or self._default_constraint_name("relative")}
+        if self.pending_constraint_type in {"object_to_axis", "object_to_plane"}:
+            return {
+                "status": "linked_to_viewport_pick",
+                "constrained_object": self.pending_constraint_objects[0],
+                "picked_features": [self._serialize_pick_for_constraint(pick) for pick in self.pending_constraint_features],
+            }
+        if self.pending_constraint_type == "parallel_planes":
+            features = [self._serialize_pick_for_constraint(pick) for pick in self.pending_constraint_features]
+            fixed_distance = bool(self.constraint_dialog.fixed_distance() if self.constraint_dialog is not None else False)
+            parameters = {"status": "active", "fixed_distance": fixed_distance, "picked_features": features}
+            if fixed_distance and len(self.pending_constraint_features) == 2:
+                p0 = self._world_point_for_surface(self.pending_constraint_features[0])
+                p1 = self._world_point_for_surface(self.pending_constraint_features[1])
+                n1 = self._world_normal_for_surface(self.pending_constraint_features[1])
+                parameters["plane_distance"] = float(np.dot(p0 - p1, n1))
+            return parameters
+        return {}
 
     def _serialize_pick_for_constraint(self, pick: PickedSurface) -> dict:
         data = {
@@ -985,8 +1443,10 @@ class HexapodModeler(QMainWindow):
             data["local_axis_point"] = [float(value) for value in pick.local_axis_point]
         if pick.local_axis_direction is not None:
             data["local_axis_direction"] = [float(value) for value in pick.local_axis_direction]
-        if pick.axis_radius is not None:
-            data["axis_radius"] = float(pick.axis_radius)
+        if pick.local_axis_radius:
+            data["local_axis_radius"] = float(pick.local_axis_radius)
+        if pick.local_axis_length:
+            data["local_axis_length"] = float(pick.local_axis_length)
         return data
     def _default_constraint_name(self, constraint_type: str) -> str:
         same_type_count = sum(1 for constraint in self.constraints if constraint.type == constraint_type) + 1
@@ -995,6 +1455,7 @@ class HexapodModeler(QMainWindow):
             "relative": "Relative",
             "object_to_axis": "ObjectToAxis",
             "object_to_plane": "ObjectToPlane",
+            "parallel_planes": "ParallelPlanes",
             "other": "Other",
         }
         return f"{labels.get(constraint_type, constraint_type)} {same_type_count}"
@@ -1009,7 +1470,7 @@ class HexapodModeler(QMainWindow):
             constraint.parameters["rigid_group"] = group_name
             for name in existing_objects:
                 self.objects[name].rigid_group = group_name
-        elif constraint.type in {"object_to_axis", "object_to_plane"}:
+        elif constraint.type in {"object_to_axis", "object_to_plane", "parallel_planes"}:
             constraint.parameters.setdefault("status", "recorded")
             constraint.parameters.setdefault(
                 "note",
@@ -1021,17 +1482,51 @@ class HexapodModeler(QMainWindow):
     def _rebuild_constraints_tree(self) -> None:
         self.constraints_tree.clear()
         for constraint in self.constraints:
-            item = QTreeWidgetItem([f"{constraint.name} ({constraint.type})"])
+            item = QTreeWidgetItem([f"{constraint.name} ({constraint.type})", ""])
             item.setData(0, Qt.UserRole, constraint.id)
+            objects_item = QTreeWidgetItem(["Objects"])
             for object_name in constraint.objects:
-                child = QTreeWidgetItem([object_name])
-                item.addChild(child)
-            for key, value in constraint.parameters.items():
-                child = QTreeWidgetItem([f"{key}: {value}"])
-                item.addChild(child)
-            self.constraints_tree.addTopLevelItem(item)
-            item.setExpanded(True)
+                objects_item.addChild(QTreeWidgetItem([object_name]))
+            item.addChild(objects_item)
 
+            features = constraint.parameters.get("picked_features", [])
+            if features:
+                features_item = QTreeWidgetItem(["Picked features"])
+                for feature in features:
+                    kind = feature.get("kind", "feature")
+                    object_name = feature.get("object", "unknown")
+                    cell_count = len(feature.get("cell_ids", []))
+                    features_item.addChild(QTreeWidgetItem([f"{kind} on {object_name} ({cell_count} cells)"]))
+                item.addChild(features_item)
+
+            for key, value in constraint.parameters.items():
+                if key == "picked_features":
+                    continue
+                item.addChild(QTreeWidgetItem([f"{key}: {value}"]))
+            self.constraints_tree.addTopLevelItem(item)
+            self.constraints_tree.setItemWidget(item, 1, self._constraint_tree_delete_button(constraint))
+            item.setExpanded(True)
+            objects_item.setExpanded(True)
+
+    def _constraint_tree_delete_button(self, constraint: ConstraintRecord) -> QToolButton:
+        delete_button = self._make_delete_button("Delete constraint")
+        delete_button.clicked.connect(lambda _checked=False, constraint_id=constraint.id: self.delete_constraint(constraint_id))
+        return delete_button
+
+    def delete_constraint(self, constraint_id: int) -> None:
+        self.constraints = [constraint for constraint in self.constraints if constraint.id != constraint_id]
+        self._reapply_constraint_records()
+        self._rebuild_constraints_tree()
+        self._highlight_selected()
+
+    def _reapply_constraint_records(self) -> None:
+        for obj in self.objects.values():
+            obj.fixed_absolute = False
+            obj.rigid_group = ""
+        for constraint in self.constraints:
+            self._apply_constraint_record(constraint)
+        if self.selected_name:
+            self._load_selected_into_controls()
     def _rigid_component_for(self, object_name: str) -> set[str]:
         if object_name not in self.objects:
             return set()
@@ -1073,6 +1568,7 @@ class HexapodModeler(QMainWindow):
             self.selected_name = None
             self._set_controls_enabled(False)
             self._refresh_alignment_targets()
+            self._highlight_selected()
             return
         self.selected_name = items[0].data(0, Qt.UserRole)
         self._load_selected_into_controls()
@@ -1125,6 +1621,8 @@ class HexapodModeler(QMainWindow):
         obj.rotation = [spin.value() for spin in self.rotation_spins]
         self._apply_transform(self.selected_name)
         self._propagate_rigid_group_delta(self.selected_name, old_matrix)
+        self._enforce_constraints_after_move(self.selected_name)
+        self._load_selected_into_controls()
         self.plotter.render()
 
     def _apply_transform(self, name: str) -> None:
@@ -1166,6 +1664,68 @@ class HexapodModeler(QMainWindow):
             if obj.fixed_absolute:
                 continue
             self._set_pose_from_matrix(name, delta_matrix @ self._transform_matrix_for(name))
+    def _world_point_from_feature_data(self, feature: dict) -> np.ndarray:
+        object_name = feature.get("object")
+        local_point = np.array(feature.get("local_point", [0.0, 0.0, 0.0]), dtype=float)
+        return self._transform_points(np.array([local_point]), self._transform_matrix_for(object_name))[0]
+
+    def _world_normal_from_feature_data(self, feature: dict) -> np.ndarray:
+        object_name = feature.get("object")
+        local_normal = np.array(feature.get("local_normal", [0.0, 0.0, 1.0]), dtype=float)
+        normal = self._rotation_matrix_for(object_name) @ local_normal
+        length = np.linalg.norm(normal)
+        return np.array([0.0, 0.0, 1.0]) if length <= 1e-9 else normal / length
+
+    def _enforce_constraints_after_move(self, moved_name: str) -> None:
+        if self._solving_constraints:
+            return
+        self._solving_constraints = True
+        try:
+            for constraint in self.constraints:
+                if constraint.type == "parallel_planes":
+                    self._enforce_parallel_planes_constraint(constraint, moved_name)
+        finally:
+            self._solving_constraints = False
+
+    def _enforce_parallel_planes_constraint(self, constraint: ConstraintRecord, moved_name: str) -> None:
+        features = constraint.parameters.get("picked_features", [])
+        if len(features) != 2:
+            return
+        if moved_name not in {features[0].get("object"), features[1].get("object")}:
+            return
+        moving_index = 0 if features[0].get("object") == moved_name else 1
+        target_index = 1 - moving_index
+        moving_feature = features[moving_index]
+        target_feature = features[target_index]
+        moving_object = moving_feature.get("object")
+        target_object = target_feature.get("object")
+        if moving_object not in self.objects or target_object not in self.objects:
+            return
+        if self.objects[moving_object].fixed_absolute:
+            return
+
+        old_matrix = self._transform_matrix_for(moving_object)
+        moving_normal = self._world_normal_from_feature_data(moving_feature)
+        target_normal = self._world_normal_from_feature_data(target_feature)
+        if float(np.dot(moving_normal, target_normal)) < 0.0:
+            target_normal = -target_normal
+        rotation_delta = self._rotation_between_vectors(moving_normal, target_normal)
+        new_rotation = rotation_delta @ self._rotation_matrix_for(moving_object)
+        self.objects[moving_object].rotation = self._euler_degrees_from_rotation_matrix(new_rotation)
+        self._apply_transform(moving_object)
+
+        if constraint.parameters.get("fixed_distance"):
+            moving_point = self._world_point_from_feature_data(moving_feature)
+            target_point = self._world_point_from_feature_data(target_feature)
+            target_normal = self._world_normal_from_feature_data(target_feature)
+            desired_distance = float(constraint.parameters.get("plane_distance", 0.0))
+            current_distance = float(np.dot(moving_point - target_point, target_normal))
+            delta = target_normal * (desired_distance - current_distance)
+            obj = self.objects[moving_object]
+            obj.position = [obj.position[i] + float(delta[i]) for i in range(3)]
+            self._apply_transform(moving_object)
+
+        self._propagate_rigid_group_delta(moving_object, old_matrix)
     def _world_bounds_for(self, name: str) -> tuple[float, float, float, float, float, float]:
         mesh = self.meshes[name]
         xmin, xmax, ymin, ymax, zmin, zmax = mesh.bounds
@@ -1258,8 +1818,11 @@ class HexapodModeler(QMainWindow):
 
     def _highlight_selected(self) -> None:
         related = self._related_objects_for(self.selected_name) if self.selected_name else set()
+        pending_objects = set(self.pending_constraint_objects) if self.constraint_pick_mode else set()
         for name, actor in self.actors.items():
-            if name == self.selected_name:
+            if name == self.constraint_hover_object_name and name not in pending_objects:
+                actor.prop.color = "#8bd3ff"
+            elif name == self.selected_name or name in pending_objects:
                 actor.prop.color = "#58a6ff"
             elif name in related:
                 actor.prop.color = "#ff9f1c"
@@ -1277,13 +1840,17 @@ class HexapodModeler(QMainWindow):
         self.objects[self.selected_name].position = [0.0, 0.0, 0.0]
         self._apply_transform(self.selected_name)
         self._propagate_rigid_group_delta(self.selected_name, old_matrix)
+        self._enforce_constraints_after_move(self.selected_name)
         self._load_selected_into_controls()
         self.plotter.render()
 
     def remove_selected_model(self) -> None:
-        if not self.selected_name:
+        if self.selected_name:
+            self.remove_model(self.selected_name)
+
+    def remove_model(self, name: str) -> None:
+        if name not in self.objects:
             return
-        name = self.selected_name
         self.plotter.remove_actor(name)
         self.objects.pop(name, None)
         self.meshes.pop(name, None)
@@ -1294,16 +1861,21 @@ class HexapodModeler(QMainWindow):
         if self.last_coincidence and name in {self.last_coincidence[0].object_name, self.last_coincidence[1].object_name}:
             self.last_coincidence = None
             self.reverse_coincidence_button.setEnabled(False)
+            self._refresh_coincidence_dialog()
         self._clear_hover_highlight(render=False)
         self._clear_pick_highlights(render=False)
-        item = self.tree.currentItem()
-        if item is not None:
-            index = self.tree.indexOfTopLevelItem(item)
-            if index >= 0:
+        for index in range(self.tree.topLevelItemCount()):
+            item = self.tree.topLevelItem(index)
+            if item.data(0, Qt.UserRole) == name:
                 self.tree.takeTopLevelItem(index)
-        self.selected_name = None
-        self._set_controls_enabled(False)
+                break
+        if self.selected_name == name:
+            self.selected_name = None
+            self._set_controls_enabled(False)
+        if self.constraint_hover_object_name == name:
+            self.constraint_hover_object_name = None
         self._refresh_alignment_targets()
+        self._highlight_selected()
         self.plotter.render()
 
     def save_layout(self) -> None:
@@ -1339,9 +1911,7 @@ class HexapodModeler(QMainWindow):
             self.mesh_topologies[obj.name] = self._build_mesh_topology(mesh)
             self.actors[obj.name] = self._add_mesh_actor(obj.name, mesh)
             self._apply_transform(obj.name)
-            item = QTreeWidgetItem([obj.name])
-            item.setData(0, Qt.UserRole, obj.name)
-            self.tree.addTopLevelItem(item)
+            self._add_scene_tree_item(obj.name)
 
         self.constraints.clear()
         self.next_constraint_id = 1
@@ -1373,6 +1943,28 @@ class HexapodModeler(QMainWindow):
         self.constraints.clear()
         self.next_constraint_id = 1
         self.constraints_tree.clear()
+        dialog = self.constraint_dialog
+        self.constraint_dialog = None
+        if dialog is not None:
+            dialog.blockSignals(True)
+            dialog.reject()
+            dialog.blockSignals(False)
+        coincidence_dialog = self.coincidence_dialog
+        self.coincidence_dialog = None
+        if coincidence_dialog is not None:
+            coincidence_dialog.blockSignals(True)
+            coincidence_dialog.reject()
+            coincidence_dialog.blockSignals(False)
+        self.coincidence_mode = False
+        self.coincidence_button.setChecked(False)
+        self.constraint_pick_mode = False
+        self.pending_constraint_type = ""
+        self.pending_constraint_name = ""
+        self.pending_constraint_objects.clear()
+        self.pending_constraint_features.clear()
+        self.constraint_hover_object_name = None
+        self.finish_constraint_button.setEnabled(False)
+        self.cancel_constraint_button.setEnabled(False)
         self.selected_name = None
         self.coincidence_picks.clear()
         self.last_coincidence = None
@@ -1392,6 +1984,47 @@ if __name__ == "__main__":
     window = HexapodModeler()
     window.show()
     sys.exit(app.exec())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

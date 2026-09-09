@@ -382,7 +382,7 @@
         3.7597174179256567e-16,
         34.9999999383761
       ],
-      "fixed_absolute": false,
+      "fixed_absolute": true,
       "rigid_group": ""
     },
     {
@@ -398,7 +398,7 @@
         -0.0,
         90.00000000000001
       ],
-      "fixed_absolute": false,
+      "fixed_absolute": true,
       "rigid_group": ""
     },
     {
@@ -414,7 +414,7 @@
         -1.2939261702404505e-15,
         144.9999933385165
       ],
-      "fixed_absolute": false,
+      "fixed_absolute": true,
       "rigid_group": ""
     },
     {
@@ -430,7 +430,7 @@
         -0.0,
         -90.0
       ],
-      "fixed_absolute": false,
+      "fixed_absolute": true,
       "rigid_group": ""
     },
     {
@@ -446,7 +446,7 @@
         -1.293926029149367e-15,
         -144.99999435608427
       ],
-      "fixed_absolute": false,
+      "fixed_absolute": true,
       "rigid_group": ""
     },
     {
@@ -462,7 +462,7 @@
         3.7597179845640584e-16,
         -35.00000146863439
       ],
-      "fixed_absolute": false,
+      "fixed_absolute": true,
       "rigid_group": ""
     },
     {
@@ -517,14 +517,14 @@
       "name": "servo axis_4",
       "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
       "position": [
-        29.751520155522105,
-        50.79712293394386,
-        -5.600000768899918
+        29.752,
+        50.797,
+        -5.6
       ],
       "rotation": [
-        -1.1924301485310827e-15,
-        -3.759717984564059e-16,
-        144.9999985313656
+        0.0,
+        -0.5,
+        144.2
       ],
       "fixed_absolute": false,
       "rigid_group": ""
@@ -560,6 +560,70 @@
       ],
       "fixed_absolute": false,
       "rigid_group": ""
+    },
+    {
+      "name": "Trochanter - Hexapod",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Trochanter - Hexapod.stl",
+      "position": [
+        51.778116944106,
+        0.8337932890554838,
+        -17.70000198539152
+      ],
+      "rotation": [
+        90.0,
+        -7.016709298534876e-15,
+        -180.0
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_7",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        71.278116944106,
+        18.333793289055492,
+        -13.390344517655386
+      ],
+      "rotation": [
+        -90.00000000000001,
+        -7.016709298534876e-15,
+        180.0
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_7",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        71.278116944106,
+        -6.866207473883936,
+        -19.60000192323239
+      ],
+      "rotation": [
+        -90.00000000000001,
+        7.016709298534876e-15,
+        180.0
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Femur - Hexapod",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Femur - Hexapod.stl",
+      "position": [
+        76.27811703281989,
+        7.833793289055519,
+        20.26773910625029
+      ],
+      "rotation": [
+        7.016709298534876e-15,
+        -90.0,
+        0.0
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
     }
   ],
   "constraints": [
@@ -591,6 +655,21 @@
         "Body articulation - Hexapod_4",
         "Body articulation - Hexapod_5",
         "Body articulation - Hexapod_6"
+      ],
+      "parameters": {}
+    },
+    {
+      "id": 2,
+      "type": "absolute",
+      "name": "Absolute 2",
+      "objects": [
+        "Micro servo SG90_2",
+        "Micro servo SG90",
+        "Micro servo SG90_3",
+        "Micro servo SG90_6",
+        "Micro servo SG90_4",
+        "Micro servo SG90_5",
+        "Body articulation - Hexapod_3"
       ],
       "parameters": {}
     }
