@@ -111,6 +111,59 @@ class PoseAction:
     after: dict[str, dict[str, list[float]]]
 
 
+class ResizeHandle(QWidget):
+    def __init__(self, section: "ResizableSection") -> None:
+        super().__init__()
+        self.section = section
+        self.drag_start_y: Optional[float] = None
+        self.start_height = 0
+        self.setFixedHeight(10)
+        self.setCursor(Qt.SizeVerCursor)
+        self.setToolTip("Drag to resize this section")
+        self.setStyleSheet(
+            "QWidget { background: #30363d; border-radius: 2px; margin: 3px 38px; }"
+            "QWidget:hover { background: #4b5563; }"
+        )
+
+    def mousePressEvent(self, event) -> None:
+        if event.button() != Qt.LeftButton:
+            return
+        self.drag_start_y = event.globalPosition().y()
+        self.start_height = self.section.height()
+        event.accept()
+
+    def mouseMoveEvent(self, event) -> None:
+        if self.drag_start_y is None:
+            return
+        delta = int(event.globalPosition().y() - self.drag_start_y)
+        self.section.set_section_height(self.start_height + delta)
+        event.accept()
+
+    def mouseReleaseEvent(self, event) -> None:
+        self.drag_start_y = None
+        event.accept()
+
+
+class ResizableSection(QWidget):
+    def __init__(self, title: str, widgets: list[QWidget], initial_height: int, minimum_height: int = 120) -> None:
+        super().__init__()
+        self.minimum_section_height = minimum_height
+        self.setObjectName("resizableSection")
+        self.setStyleSheet("QWidget#resizableSection { border-bottom: 1px solid #343a42; }")
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 8, 10, 0)
+        layout.setSpacing(6)
+        layout.addWidget(QLabel(title))
+        for widget in widgets:
+            layout.addWidget(widget)
+        layout.addWidget(ResizeHandle(self))
+        self.set_section_height(initial_height)
+
+    def set_section_height(self, height: int) -> None:
+        self.setFixedHeight(max(self.minimum_section_height, height))
+
+
 class AddConstraintDialog(QDialog):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -175,13 +228,13 @@ class AddConstraintDialog(QDialog):
 
     def _update_help_text(self) -> None:
         help_by_type = {
-            "absolute": "After clicking OK, select one or more whole 3D objects directly in the viewport, then click Finish constraint.",
-            "relative": "After clicking OK, select the objects that must move as one rigid assembly, then click Finish constraint.",
-            "object_to_axis": "After clicking OK, click the constrained object, then click the target hole/cylindrical axis in the viewport.",
-            "object_to_plane": "After clicking OK, click the constrained object, then click the target plane in the viewport.",
+            "absolute": "Select one or more whole 3D objects directly in the viewport, then validate with OK.",
+            "relative": "Select the objects that must move as one rigid assembly, then validate with OK.",
+            "object_to_axis": "Click the constrained object, then click the target hole/cylindrical axis in the viewport. Validate with OK.",
+            "object_to_plane": "Click the constrained object, then click the target plane in the viewport. Validate with OK.",
             "parallel_planes": "Select two planes on two different objects. Enable Fixed distance to keep the initial plane distance locked.",
-            "dynamic_rotation": "After clicking OK, click the core object, click its live rotation axis, then click every object that must rotate with that core.",
-            "other": "After clicking OK, select one or more objects directly in the viewport, then validate with OK.",
+            "dynamic_rotation": "Click the core object, click its live rotation axis, then click every object that must rotate with that core. Validate with OK.",
+            "other": "Select one or more objects directly in the viewport, then validate with OK.",
         }
         self.fixed_distance_checkbox.setVisible(self.selected_type() == "parallel_planes")
         self.help_label.setText(help_by_type[self.selected_type()])
@@ -302,6 +355,9 @@ class HexapodModeler(QMainWindow):
         self.tree.header().setSectionResizeMode(1, QHeaderView.Fixed)
         self.tree.setColumnWidth(1, 24)
         self.tree.setMinimumHeight(90)
+        self.tree.setTextElideMode(Qt.ElideRight)
+        self.tree.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.tree.setStyleSheet("QTreeWidget::item { min-height: 22px; }")
         self.tree.itemSelectionChanged.connect(self._on_tree_selection_changed)
 
         self.constraints_tree = QTreeWidget()
@@ -312,6 +368,9 @@ class HexapodModeler(QMainWindow):
         self.constraints_tree.header().setSectionResizeMode(1, QHeaderView.Fixed)
         self.constraints_tree.setColumnWidth(1, 24)
         self.constraints_tree.setMinimumHeight(90)
+        self.constraints_tree.setTextElideMode(Qt.ElideRight)
+        self.constraints_tree.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.constraints_tree.setStyleSheet("QTreeWidget::item { min-height: 22px; }")
         add_constraint_button = QPushButton("Add constraint")
         add_constraint_button.clicked.connect(self.add_constraint)
         self.finish_constraint_button = QPushButton("Finish constraint")
@@ -388,23 +447,12 @@ class HexapodModeler(QMainWindow):
         self.selected_feature_combo.setEnabled(False)
         self.target_feature_combo.setEnabled(False)
 
-
-        scene_tree_panel = QWidget()
-        scene_tree_layout = QVBoxLayout(scene_tree_panel)
-        scene_tree_layout.setContentsMargins(12, 8, 10, 8)
-        scene_tree_layout.addWidget(QLabel("Scene tree"))
-        scene_tree_layout.addWidget(self.tree)
-
-        constraints_tree_panel = QWidget()
-        constraints_tree_layout = QVBoxLayout(constraints_tree_panel)
-        constraints_tree_layout.setContentsMargins(12, 8, 10, 8)
-        constraints_tree_layout.addWidget(QLabel("Constraints"))
-        constraints_tree_layout.addWidget(self.constraints_tree)
-        constraints_tree_layout.addWidget(add_constraint_button)
-        constraints_tree_layout.addWidget(self.finish_constraint_button)
-        constraints_tree_layout.addWidget(self.cancel_constraint_button)
+        scene_tree_panel = ResizableSection("Scene tree", [self.tree], initial_height=230)
+        constraints_tree_panel = ResizableSection("Constraints", [self.constraints_tree, add_constraint_button], initial_height=270)
 
         controls_panel = QWidget()
+        controls_panel.setObjectName("controlsPanel")
+        controls_panel.setStyleSheet("QWidget#controlsPanel { border-bottom: 1px solid #343a42; }")
         controls_layout = QVBoxLayout(controls_panel)
         controls_layout.setContentsMargins(12, 8, 10, 8)
         controls_layout.addLayout(transform_form)
@@ -415,23 +463,17 @@ class HexapodModeler(QMainWindow):
         controls_layout.addWidget(self.coincidence_button)
         controls_layout.addWidget(self.coincidence_status)
         controls_layout.addStretch(1)
-        scene_tree_panel.setMinimumHeight(120)
-        constraints_tree_panel.setMinimumHeight(120)
         controls_panel.setMinimumHeight(420)
 
-        side_panel = QSplitter(Qt.Vertical)
-        side_panel.setHandleWidth(10)
-        side_panel.setOpaqueResize(True)
-        side_panel.setChildrenCollapsible(False)
-        side_panel.setMinimumHeight(760)
-        side_panel.setStyleSheet("QSplitter::handle:vertical { background: #343a42; margin: 3px 18px; border-radius: 2px; }")
-        side_panel.addWidget(scene_tree_panel)
-        side_panel.addWidget(constraints_tree_panel)
-        side_panel.addWidget(controls_panel)
-        side_panel.setStretchFactor(0, 1)
-        side_panel.setStretchFactor(1, 1)
-        side_panel.setStretchFactor(2, 1)
-        side_panel.setSizes([260, 260, 360])
+        side_panel = QWidget()
+        side_panel.setMinimumHeight(800)
+        side_layout = QVBoxLayout(side_panel)
+        side_layout.setContentsMargins(0, 0, 0, 0)
+        side_layout.setSpacing(0)
+        side_layout.addWidget(scene_tree_panel)
+        side_layout.addWidget(constraints_tree_panel)
+        side_layout.addWidget(controls_panel)
+        side_layout.addStretch(1)
 
 
         splitter = QSplitter(Qt.Horizontal)
@@ -475,6 +517,21 @@ class HexapodModeler(QMainWindow):
     def _vtk_interactor(self):
         return getattr(self.plotter.iren, "interactor", self.plotter.iren)
 
+    def _can_render(self) -> bool:
+        if self.plotter.width() <= 0 or self.plotter.height() <= 0:
+            return False
+        render_window = getattr(self.plotter, "render_window", None)
+        if render_window is not None:
+            width, height = render_window.GetSize()
+            if width <= 0 or height <= 0:
+                return False
+        return True
+
+    def _render(self) -> None:
+        if not self._can_render():
+            return
+        self.plotter.render()
+
     def _make_spinbox(self, minimum: float, maximum: float, step: float) -> QDoubleSpinBox:
         spin = QDoubleSpinBox()
         spin.setRange(minimum, maximum)
@@ -503,14 +560,14 @@ class HexapodModeler(QMainWindow):
         item = self._add_scene_tree_item(name)
         self.tree.setCurrentItem(item)
         self._refresh_alignment_targets()
-        self.plotter.reset_camera()
+        self.reset_camera()
 
     def _load_mesh(self, path: Path) -> pv.PolyData:
         suffix = path.suffix.lower()
         if suffix == ".stl":
             mesh = pv.read(path)
             if not isinstance(mesh, pv.PolyData):
-                mesh = mesh.extract_geometry()
+                mesh = mesh.extract_surface()
             return self._prepare_stl_mesh(mesh)
         if suffix in {".stp", ".step"}:
             return self._load_step_mesh(path)
@@ -535,7 +592,7 @@ class HexapodModeler(QMainWindow):
         return self._prepare_stl_mesh(pv.PolyData(np.array(vertices), np.array(faces)))
 
     def _prepare_stl_mesh(self, mesh: pv.PolyData) -> pv.PolyData:
-        mesh = mesh.extract_geometry().triangulate().clean()
+        mesh = mesh.extract_surface().triangulate().clean()
         return mesh.compute_normals(point_normals=True, cell_normals=True, auto_orient_normals=True, consistent_normals=True, split_vertices=True, feature_angle=35.0)
 
     def _build_mesh_topology(self, mesh: pv.PolyData) -> MeshTopology:
@@ -587,7 +644,7 @@ class HexapodModeler(QMainWindow):
         for name, mesh in self.meshes.items():
             self.actors[name] = self._add_mesh_actor(name, mesh)
             self._apply_transform(name)
-        self.plotter.render()
+        self._render()
 
     def _unique_name(self, base: str) -> str:
         candidate = base
@@ -826,7 +883,7 @@ class HexapodModeler(QMainWindow):
             tube_radius = max(radius * 0.08, self._highlight_offset_for(picked) * 1.5)
             return line.tube(radius=tube_radius, n_sides=16)
 
-        mesh = self.meshes[picked.object_name].extract_cells(picked.cell_ids).extract_geometry().triangulate()
+        mesh = self.meshes[picked.object_name].extract_cells(picked.cell_ids).extract_surface().triangulate()
         world_points = self._transform_points(np.array(mesh.points), self._transform_matrix_for(picked.object_name))
         world_points = world_points + self._world_normal_for_surface(picked) * self._highlight_offset_for(picked)
         return pv.PolyData(world_points, mesh.faces).clean()
@@ -869,7 +926,7 @@ class HexapodModeler(QMainWindow):
                 line_width=4,
                 pickable=False,
             )
-        self.plotter.render()
+        self._render()
 
     def _clear_hover_highlight(self, render: bool = True) -> None:
         if self.hover_pick_signature is None:
@@ -881,7 +938,7 @@ class HexapodModeler(QMainWindow):
                 pass
         self.hover_pick_signature = None
         if render:
-            self.plotter.render()
+            self._render()
 
     def _add_pick_highlight(self, picked: PickedSurface) -> None:
         name = f"__coincidence_pick_{len(self.pick_highlight_names)}__"
@@ -906,7 +963,7 @@ class HexapodModeler(QMainWindow):
                 pickable=False,
             )
         self._clear_hover_highlight(render=False)
-        self.plotter.render()
+        self._render()
 
     def _clear_pick_highlights(self, render: bool = True) -> None:
         for name in [*self.pick_highlight_names, *self.pick_boundary_names]:
@@ -917,7 +974,7 @@ class HexapodModeler(QMainWindow):
         self.pick_highlight_names.clear()
         self.pick_boundary_names.clear()
         if render:
-            self.plotter.render()
+            self._render()
 
     def toggle_coincidence_mode(self) -> None:
         if self.constraint_pick_mode:
@@ -986,7 +1043,7 @@ class HexapodModeler(QMainWindow):
         elif self.coincidence_mode:
             self._set_coincidence_status("Coincidence: hover a surface or axis, then click the moving feature and the target feature.")
         self._refresh_coincidence_dialog()
-        self.plotter.render()
+        self._render()
 
     def _update_coincidence_status(self) -> None:
         count = len(self.coincidence_picks)
@@ -1069,7 +1126,7 @@ class HexapodModeler(QMainWindow):
             self.coincidence_picks.clear()
             self._clear_pick_highlights(render=False)
         self._set_coincidence_status(f"Coincidence: '{moving.object_name}' moved onto '{target.object_name}'.")
-        self.plotter.render()
+        self._render()
 
     def _apply_axis_coincidence(self, moving: PickedSurface, target: PickedSurface, clear_selection: bool = True) -> None:
         if self.objects[moving.object_name].fixed_absolute:
@@ -1109,7 +1166,7 @@ class HexapodModeler(QMainWindow):
             self.coincidence_picks.clear()
             self._clear_pick_highlights(render=False)
         self._set_coincidence_status(f"Coincidence: axis of '{moving.object_name}' aligned to axis of '{target.object_name}'.")
-        self.plotter.render()
+        self._render()
     def _rotation_between_vectors(self, source: np.ndarray, target: np.ndarray) -> np.ndarray:
         source = source / np.linalg.norm(source)
         target = target / np.linalg.norm(target)
@@ -1517,7 +1574,7 @@ class HexapodModeler(QMainWindow):
             self._clear_pick_highlights(render=False)
         if close_dialog and dialog is not None:
             dialog.reject()
-        self.plotter.render()
+        self._render()
 
     def _pending_constraint_parameters(self) -> dict:
         if self.pending_constraint_type == "relative":
@@ -1600,9 +1657,25 @@ class HexapodModeler(QMainWindow):
         if self.selected_name:
             self._load_selected_into_controls()
 
+    def _constraint_tree_expansion_state(self) -> dict[int, dict[str, bool]]:
+        state: dict[int, dict[str, bool]] = {}
+        for index in range(self.constraints_tree.topLevelItemCount()):
+            item = self.constraints_tree.topLevelItem(index)
+            constraint_id = item.data(0, Qt.UserRole)
+            if constraint_id is None:
+                continue
+            item_state = {"__root__": item.isExpanded()}
+            for child_index in range(item.childCount()):
+                child = item.child(child_index)
+                item_state[child.text(0)] = child.isExpanded()
+            state[int(constraint_id)] = item_state
+        return state
+
     def _rebuild_constraints_tree(self) -> None:
+        expansion_state = self._constraint_tree_expansion_state()
         self.constraints_tree.clear()
         for constraint in self.constraints:
+            item_state = expansion_state.get(constraint.id, {})
             item = QTreeWidgetItem([f"{constraint.name} ({constraint.type})", ""])
             item.setData(0, Qt.UserRole, constraint.id)
             objects_item = QTreeWidgetItem(["Objects"])
@@ -1619,6 +1692,7 @@ class HexapodModeler(QMainWindow):
                     cell_count = len(feature.get("cell_ids", []))
                     features_item.addChild(QTreeWidgetItem([f"{kind} on {object_name} ({cell_count} cells)"]))
                 item.addChild(features_item)
+                features_item.setExpanded(item_state.get("Picked features", False))
 
             axis_feature = constraint.parameters.get("axis_feature")
             if axis_feature:
@@ -1632,8 +1706,8 @@ class HexapodModeler(QMainWindow):
                 item.addChild(QTreeWidgetItem([f"{key}: {value}"]))
             self.constraints_tree.addTopLevelItem(item)
             self.constraints_tree.setItemWidget(item, 1, self._constraint_tree_delete_button(constraint))
-            item.setExpanded(True)
-            objects_item.setExpanded(True)
+            item.setExpanded(item_state.get("__root__", True))
+            objects_item.setExpanded(item_state.get("Objects", True))
 
     def _constraint_tree_delete_button(self, constraint: ConstraintRecord) -> QToolButton:
         delete_button = self._make_delete_button("Delete constraint")
@@ -1815,7 +1889,7 @@ class HexapodModeler(QMainWindow):
                 self._apply_transform(name)
             self._load_selected_into_controls()
             self._highlight_selected()
-            self.plotter.render()
+            self._render()
         finally:
             self._restoring_history = False
 
@@ -1856,7 +1930,7 @@ class HexapodModeler(QMainWindow):
         self._load_selected_into_controls()
         after = self._snapshot_objects(affected_names)
         self._push_pose_history(f"Move {self.selected_name}", before, after)
-        self.plotter.render()
+        self._render()
 
     def _apply_transform(self, name: str) -> None:
         self.actors[name].user_matrix = self._transform_matrix_for(name)
@@ -1998,7 +2072,7 @@ class HexapodModeler(QMainWindow):
         after = self._snapshot_objects(affected_names)
         self._push_pose_history(f"Dynamic rotate {self.selected_name}", before, after)
         self.coincidence_status.setText(f"Dynamic rotation: '{self.selected_name}' rotated {angle_degrees:.3f} deg around its live axis.")
-        self.plotter.render()
+        self._render()
         return True
 
     def _apply_dynamic_rotation_constraints(self, moved_name: str, old_moved_matrix: np.ndarray) -> bool:
@@ -2161,7 +2235,7 @@ class HexapodModeler(QMainWindow):
         self._load_selected_into_controls()
         after = self._snapshot_objects(affected_names)
         self._push_pose_history(f"Align {selected}", before, after)
-        self.plotter.render()
+        self._render()
 
     def align_selected_center_to_target(self) -> None:
         selected, target = self._selected_and_target()
@@ -2182,7 +2256,7 @@ class HexapodModeler(QMainWindow):
         self._load_selected_into_controls()
         after = self._snapshot_objects(affected_names)
         self._push_pose_history(f"Center align {selected}", before, after)
-        self.plotter.render()
+        self._render()
 
     def copy_target_rotation_to_selected(self) -> None:
         selected, target = self._selected_and_target()
@@ -2201,7 +2275,7 @@ class HexapodModeler(QMainWindow):
         self._load_selected_into_controls()
         after = self._snapshot_objects(affected_names)
         self._push_pose_history(f"Copy rotation {selected}", before, after)
-        self.plotter.render()
+        self._render()
 
     def _highlight_selected(self) -> None:
         related = self._related_objects_for(self.selected_name) if self.selected_name else set()
@@ -2215,7 +2289,7 @@ class HexapodModeler(QMainWindow):
                 actor.prop.color = "#ff9f1c"
             else:
                 actor.prop.color = "#c9d1d9"
-        self.plotter.render()
+        self._render()
 
     def move_selected_to_origin(self) -> None:
         if not self.selected_name:
@@ -2233,7 +2307,7 @@ class HexapodModeler(QMainWindow):
         self._load_selected_into_controls()
         after = self._snapshot_objects(affected_names)
         self._push_pose_history(f"Move {self.selected_name} to origin", before, after)
-        self.plotter.render()
+        self._render()
 
     def remove_selected_model(self) -> None:
         if self.selected_name:
@@ -2268,7 +2342,7 @@ class HexapodModeler(QMainWindow):
         self._refresh_alignment_targets()
         self._update_dynamic_axis_controls()
         self._highlight_selected()
-        self.plotter.render()
+        self._render()
 
     def save_layout(self) -> None:
         file_path, _ = QFileDialog.getSaveFileName(self, "Save layout", "hexapod_scene.json", "JSON (*.json)")
@@ -2324,7 +2398,7 @@ class HexapodModeler(QMainWindow):
         self._rebuild_constraints_tree()
         self._refresh_alignment_targets()
         self._update_dynamic_axis_controls()
-        self.plotter.reset_camera()
+        self.reset_camera()
 
     def _remap_constraint_parameters(self, parameters: dict, name_map: dict[str, str]) -> dict:
         remapped = json.loads(json.dumps(parameters))
@@ -2396,7 +2470,16 @@ class HexapodModeler(QMainWindow):
 
     def reset_camera(self) -> None:
         self.plotter.camera_position = "iso"
+        if not self._can_render():
+            return
         self.plotter.reset_camera()
+
+    def closeEvent(self, event) -> None:
+        try:
+            self.plotter.disable_eye_dome_lighting()
+        except Exception:
+            pass
+        event.accept()
 
 
 if __name__ == "__main__":
