@@ -104,6 +104,13 @@ class ConstraintRecord:
     parameters: dict
 
 
+@dataclass
+class PoseAction:
+    label: str
+    before: dict[str, dict[str, list[float]]]
+    after: dict[str, dict[str, list[float]]]
+
+
 class AddConstraintDialog(QDialog):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -116,6 +123,7 @@ class AddConstraintDialog(QDialog):
         self.type_combo.addItem("Object to axis", "object_to_axis")
         self.type_combo.addItem("Object to plane", "object_to_plane")
         self.type_combo.addItem("Parallel planes", "parallel_planes")
+        self.type_combo.addItem("Dynamic rotation constraint", "dynamic_rotation")
         self.type_combo.addItem("Other / placeholder", "other")
         self.type_combo.currentIndexChanged.connect(self._update_help_text)
 
@@ -172,6 +180,7 @@ class AddConstraintDialog(QDialog):
             "object_to_axis": "After clicking OK, click the constrained object, then click the target hole/cylindrical axis in the viewport.",
             "object_to_plane": "After clicking OK, click the constrained object, then click the target plane in the viewport.",
             "parallel_planes": "Select two planes on two different objects. Enable Fixed distance to keep the initial plane distance locked.",
+            "dynamic_rotation": "After clicking OK, click the core object, click its live rotation axis, then click every object that must rotate with that core.",
             "other": "After clicking OK, select one or more objects directly in the viewport, then validate with OK.",
         }
         self.fixed_distance_checkbox.setVisible(self.selected_type() == "parallel_planes")
@@ -244,6 +253,11 @@ class HexapodModeler(QMainWindow):
         self._updating_controls = False
         self._updating_alignment_controls = False
         self._solving_constraints = False
+        self._restoring_history = False
+        self._updating_dynamic_axis_angle = False
+        self._last_dynamic_axis_angle = 0.0
+        self.undo_stack: list[PoseAction] = []
+        self.redo_stack: list[PoseAction] = []
         self.display_mode = "sharp"
         self.step_linear_tolerance = 0.02
         self.step_angular_tolerance = 0.05
@@ -260,6 +274,14 @@ class HexapodModeler(QMainWindow):
         load_action.triggered.connect(self.load_layout)
         reset_camera_action = QAction("Reset camera", self)
         reset_camera_action.triggered.connect(self.reset_camera)
+        self.undo_action = QAction("Undo", self)
+        self.undo_action.setShortcut("Ctrl+Z")
+        self.undo_action.setEnabled(False)
+        self.undo_action.triggered.connect(self.undo_last_action)
+        self.redo_action = QAction("Redo", self)
+        self.redo_action.setShortcut("Ctrl+Y")
+        self.redo_action.setEnabled(False)
+        self.redo_action.triggered.connect(self.redo_last_action)
 
         toolbar = self.addToolBar("Main tools")
         toolbar.setMovable(False)
@@ -267,6 +289,9 @@ class HexapodModeler(QMainWindow):
         toolbar.addAction(save_action)
         toolbar.addAction(load_action)
         toolbar.addAction(reset_camera_action)
+        toolbar.addSeparator()
+        toolbar.addAction(self.undo_action)
+        toolbar.addAction(self.redo_action)
 
         self.plotter = QtInteractor(self)
         self.tree = QTreeWidget()
@@ -300,6 +325,12 @@ class HexapodModeler(QMainWindow):
         self.rotation_spins = [self._make_spinbox(-360, 360, 0.1) for _ in range(3)]
         for spin in [*self.position_spins, *self.rotation_spins]:
             spin.valueChanged.connect(self._on_transform_changed)
+        self.dynamic_axis_angle_spin = self._make_spinbox(-360, 360, 1.0)
+        self.dynamic_axis_angle_spin.setToolTip("Angle to apply around the selected core object's live dynamic rotation axis.")
+        self.dynamic_axis_angle_spin.valueChanged.connect(self._on_dynamic_axis_angle_changed)
+        self.dynamic_axis_button = QPushButton("Reset dynamic angle")
+        self.dynamic_axis_button.setEnabled(False)
+        self.dynamic_axis_button.clicked.connect(self.reset_dynamic_axis_angle)
 
         self.quality_combo = QComboBox()
         self.quality_combo.addItem("Sharp CAD view", "sharp")
@@ -316,6 +347,7 @@ class HexapodModeler(QMainWindow):
         transform_form.addRow("Rx", self.rotation_spins[0])
         transform_form.addRow("Ry", self.rotation_spins[1])
         transform_form.addRow("Rz", self.rotation_spins[2])
+        transform_form.addRow("Dynamic axis deg", self.dynamic_axis_angle_spin)
         transform_form.addRow("Display quality", self.quality_combo)
 
         zero_button = QPushButton("Move selected to origin")
@@ -369,11 +401,15 @@ class HexapodModeler(QMainWindow):
         constraints_tree_layout.addWidget(QLabel("Constraints"))
         constraints_tree_layout.addWidget(self.constraints_tree)
         constraints_tree_layout.addWidget(add_constraint_button)
+        constraints_tree_layout.addWidget(self.finish_constraint_button)
+        constraints_tree_layout.addWidget(self.cancel_constraint_button)
 
         controls_panel = QWidget()
         controls_layout = QVBoxLayout(controls_panel)
         controls_layout.setContentsMargins(12, 8, 10, 8)
         controls_layout.addLayout(transform_form)
+        controls_layout.addLayout(constraints_form)
+        controls_layout.addWidget(self.dynamic_axis_button)
         controls_layout.addWidget(zero_button)
         controls_layout.addWidget(remove_button)
         controls_layout.addWidget(self.coincidence_button)
@@ -381,12 +417,13 @@ class HexapodModeler(QMainWindow):
         controls_layout.addStretch(1)
         scene_tree_panel.setMinimumHeight(120)
         constraints_tree_panel.setMinimumHeight(120)
-        controls_panel.setMinimumHeight(220)
+        controls_panel.setMinimumHeight(420)
 
         side_panel = QSplitter(Qt.Vertical)
         side_panel.setHandleWidth(10)
         side_panel.setOpaqueResize(True)
         side_panel.setChildrenCollapsible(False)
+        side_panel.setMinimumHeight(760)
         side_panel.setStyleSheet("QSplitter::handle:vertical { background: #343a42; margin: 3px 18px; border-radius: 2px; }")
         side_panel.addWidget(scene_tree_panel)
         side_panel.addWidget(constraints_tree_panel)
@@ -1000,6 +1037,8 @@ class HexapodModeler(QMainWindow):
             self.coincidence_picks.clear()
             self._clear_pick_highlights()
             return
+        affected_names = self._movement_affected_names(moving.object_name)
+        before = self._snapshot_objects(affected_names)
         old_matrix = self._transform_matrix_for(moving.object_name)
 
         moving_normal = self._world_normal_for_surface(moving)
@@ -1024,6 +1063,8 @@ class HexapodModeler(QMainWindow):
         self._apply_transform(moving.object_name)
         self._propagate_rigid_group_delta(moving.object_name, old_matrix)
         self._load_selected_into_controls()
+        after = self._snapshot_objects(affected_names)
+        self._push_pose_history(f"Coincidence {moving.object_name}", before, after)
         if clear_selection:
             self.coincidence_picks.clear()
             self._clear_pick_highlights(render=False)
@@ -1036,6 +1077,8 @@ class HexapodModeler(QMainWindow):
             self.coincidence_picks.clear()
             self._clear_pick_highlights()
             return
+        affected_names = self._movement_affected_names(moving.object_name)
+        before = self._snapshot_objects(affected_names)
         old_matrix = self._transform_matrix_for(moving.object_name)
 
         moving_point, moving_direction, _, _ = self._world_axis_for(moving)
@@ -1060,6 +1103,8 @@ class HexapodModeler(QMainWindow):
         self._apply_transform(moving.object_name)
         self._propagate_rigid_group_delta(moving.object_name, old_matrix)
         self._load_selected_into_controls()
+        after = self._snapshot_objects(affected_names)
+        self._push_pose_history(f"Axis coincidence {moving.object_name}", before, after)
         if clear_selection:
             self.coincidence_picks.clear()
             self._clear_pick_highlights(render=False)
@@ -1088,7 +1133,7 @@ class HexapodModeler(QMainWindow):
         return np.array([[t * x * x + c, t * x * y - s * z, t * x * z + s * y], [t * x * y + s * z, t * y * y + c, t * y * z - s * x], [t * x * z - s * y, t * y * z + s * x, t * z * z + c]])
 
     def _euler_degrees_from_rotation_matrix(self, matrix: np.ndarray) -> list[float]:
-        sy = -matrix[2, 0]
+        sy = float(np.clip(-matrix[2, 0], -1.0, 1.0))
         cy = math.sqrt(max(0.0, 1.0 - sy * sy))
         if cy > 1e-8:
             rx = math.atan2(matrix[2, 1], matrix[2, 2])
@@ -1204,10 +1249,19 @@ class HexapodModeler(QMainWindow):
         if self.pending_constraint_type == "parallel_planes":
             count = len(self.pending_constraint_features)
             return f"Constraint pick: click two planes on two different objects ({count}/2 selected). OK enables when both planes are valid."
+        if self.pending_constraint_type == "dynamic_rotation":
+            if not self.pending_constraint_objects:
+                return "Constraint pick: click the core object that drives this dynamic rotation."
+            if not self.pending_constraint_features:
+                return f"Constraint pick: core is '{self.pending_constraint_objects[0]}'. Click its live rotation axis on any object."
+            attached_count = max(0, len(self.pending_constraint_objects) - 1)
+            return f"Constraint pick: click attached objects that rotate with '{self.pending_constraint_objects[0]}' ({attached_count} attached). OK enables when at least one attached object is selected."
         return "Constraint pick: select elements in the 3D view."
 
     def _required_pending_feature_kind(self) -> Optional[str]:
         if self.pending_constraint_type == "object_to_axis":
+            return "axis"
+        if self.pending_constraint_type == "dynamic_rotation" and self.pending_constraint_objects and not self.pending_constraint_features:
             return "axis"
         if self.pending_constraint_type in {"object_to_plane", "parallel_planes"}:
             return "surface"
@@ -1229,10 +1283,19 @@ class HexapodModeler(QMainWindow):
         if self.pending_constraint_type == "parallel_planes":
             feature_objects = {feature.object_name for feature in self.pending_constraint_features}
             return len(self.pending_constraint_features) == 2 and len(feature_objects) == 2
+        if self.pending_constraint_type == "dynamic_rotation":
+            return len(self.pending_constraint_objects) >= 2 and len(self.pending_constraint_features) == 1
         return False
 
     def _pending_constraint_entries(self) -> list[str]:
-        entries = [f"Object: {name}" for name in self.pending_constraint_objects]
+        if self.pending_constraint_type == "dynamic_rotation":
+            entries = []
+            if self.pending_constraint_objects:
+                entries.append(f"Core: {self.pending_constraint_objects[0]}")
+            for name in self.pending_constraint_objects[1:]:
+                entries.append(f"Attached: {name}")
+        else:
+            entries = [f"Object: {name}" for name in self.pending_constraint_objects]
         for feature in self.pending_constraint_features:
             label = "Axis" if feature.feature_kind == "axis" else "Plane"
             entries.append(f"{label}: {feature.object_name} ({len(feature.cell_ids)} cells)")
@@ -1241,6 +1304,8 @@ class HexapodModeler(QMainWindow):
     def _update_constraint_hover(self) -> None:
         required_kind = self._required_pending_feature_kind()
         needs_object_hover = required_kind is None or (not self.pending_constraint_objects and self.pending_constraint_type != "parallel_planes")
+        if self.pending_constraint_type == "dynamic_rotation" and self.pending_constraint_features:
+            needs_object_hover = True
         if needs_object_hover:
             self._clear_hover_highlight(render=False)
             object_name = self._pick_object_name_at_current_mouse_position()
@@ -1286,6 +1351,9 @@ class HexapodModeler(QMainWindow):
             return
         if self.pending_constraint_type == "parallel_planes":
             self._handle_parallel_planes_constraint_click()
+            return
+        if self.pending_constraint_type == "dynamic_rotation":
+            self._handle_dynamic_rotation_constraint_click()
             return
         self._handle_object_to_feature_constraint_click()
 
@@ -1358,6 +1426,47 @@ class HexapodModeler(QMainWindow):
         self._highlight_selected()
         self._refresh_constraint_dialog_state()
 
+    def _handle_dynamic_rotation_constraint_click(self) -> None:
+        if not self.pending_constraint_objects:
+            object_name = self._pick_object_name_at_current_mouse_position()
+            if object_name is None:
+                self.coincidence_status.setText("Constraint pick: click the core 3D object first.")
+                return
+            self.pending_constraint_objects = [object_name]
+            self.selected_name = object_name
+            self._select_tree_item(object_name)
+            self._highlight_selected()
+            self._refresh_constraint_dialog_state()
+            return
+
+        if not self.pending_constraint_features:
+            picked = self._pick_surface_at_current_mouse_position()
+            if picked is None or picked.feature_kind != "axis":
+                self.coincidence_status.setText("Constraint pick: click a detected hole/cylindrical axis for the core.")
+                return
+            self.pending_constraint_features = [picked]
+            self._clear_pick_highlights(render=False)
+            self._add_pick_highlight(picked)
+            self._refresh_constraint_dialog_state()
+            return
+
+        object_name = self._pick_object_name_at_current_mouse_position()
+        if object_name is None:
+            self.coincidence_status.setText("Constraint pick: click attached 3D objects after selecting the axis.")
+            return
+        core_name = self.pending_constraint_objects[0]
+        if object_name == core_name:
+            self.coincidence_status.setText("Constraint pick: the core is already selected. Click attached objects.")
+            return
+        if object_name in self.pending_constraint_objects:
+            self.pending_constraint_objects.remove(object_name)
+        else:
+            self.pending_constraint_objects.append(object_name)
+        self.selected_name = object_name
+        self._select_tree_item(object_name)
+        self._highlight_selected()
+        self._refresh_constraint_dialog_state()
+
     def finish_constraint_picking(self) -> None:
         if not self.constraint_pick_mode:
             return
@@ -1383,6 +1492,7 @@ class HexapodModeler(QMainWindow):
         self._rebuild_constraints_tree()
         self._reset_constraint_picking(clear_highlights=True, close_dialog=self.sender() is self.finish_constraint_button)
         self._highlight_selected()
+        self._update_dynamic_axis_controls()
 
     def cancel_constraint_picking(self) -> None:
         if not self.constraint_pick_mode:
@@ -1428,6 +1538,13 @@ class HexapodModeler(QMainWindow):
                 n1 = self._world_normal_for_surface(self.pending_constraint_features[1])
                 parameters["plane_distance"] = float(np.dot(p0 - p1, n1))
             return parameters
+        if self.pending_constraint_type == "dynamic_rotation":
+            return {
+                "status": "active",
+                "core_object": self.pending_constraint_objects[0],
+                "axis_feature": self._serialize_pick_for_constraint(self.pending_constraint_features[0]),
+                "driven_objects": list(self.pending_constraint_objects[1:]),
+            }
         return {}
 
     def _serialize_pick_for_constraint(self, pick: PickedSurface) -> dict:
@@ -1456,6 +1573,7 @@ class HexapodModeler(QMainWindow):
             "object_to_axis": "ObjectToAxis",
             "object_to_plane": "ObjectToPlane",
             "parallel_planes": "ParallelPlanes",
+            "dynamic_rotation": "DynamicRotation",
             "other": "Other",
         }
         return f"{labels.get(constraint_type, constraint_type)} {same_type_count}"
@@ -1476,6 +1594,9 @@ class HexapodModeler(QMainWindow):
                 "note",
                 "Recorded from the constraints panel. Use direct Coincidence to create picked geometry alignment.",
             )
+        elif constraint.type == "dynamic_rotation":
+            constraint.parameters.setdefault("status", "active")
+            constraint.parameters.setdefault("note", "When the core object rotates, the core and driven objects rotate around the current live axis.")
         if self.selected_name:
             self._load_selected_into_controls()
 
@@ -1499,8 +1620,14 @@ class HexapodModeler(QMainWindow):
                     features_item.addChild(QTreeWidgetItem([f"{kind} on {object_name} ({cell_count} cells)"]))
                 item.addChild(features_item)
 
+            axis_feature = constraint.parameters.get("axis_feature")
+            if axis_feature:
+                axis_object = axis_feature.get("object", "unknown")
+                cell_count = len(axis_feature.get("cell_ids", []))
+                item.addChild(QTreeWidgetItem([f"Live axis: {axis_object} ({cell_count} cells)"]))
+
             for key, value in constraint.parameters.items():
-                if key == "picked_features":
+                if key in {"picked_features", "axis_feature"}:
                     continue
                 item.addChild(QTreeWidgetItem([f"{key}: {value}"]))
             self.constraints_tree.addTopLevelItem(item)
@@ -1518,6 +1645,7 @@ class HexapodModeler(QMainWindow):
         self._reapply_constraint_records()
         self._rebuild_constraints_tree()
         self._highlight_selected()
+        self._update_dynamic_axis_controls()
 
     def _reapply_constraint_records(self) -> None:
         for obj in self.objects.values():
@@ -1559,6 +1687,19 @@ class HexapodModeler(QMainWindow):
     def _remove_object_from_constraints(self, object_name: str) -> None:
         for constraint in self.constraints:
             constraint.objects = [name for name in constraint.objects if name != object_name]
+            if constraint.type == "dynamic_rotation":
+                if constraint.parameters.get("core_object") == object_name:
+                    constraint.objects.clear()
+                    continue
+                axis_feature = constraint.parameters.get("axis_feature", {})
+                if axis_feature.get("object") == object_name:
+                    constraint.objects.clear()
+                    continue
+                constraint.parameters["driven_objects"] = [
+                    name for name in constraint.parameters.get("driven_objects", []) if name != object_name
+                ]
+                if not constraint.parameters["driven_objects"]:
+                    constraint.objects.clear()
         self.constraints = [constraint for constraint in self.constraints if constraint.objects]
         self._rebuild_constraints_tree()
 
@@ -1586,8 +1727,13 @@ class HexapodModeler(QMainWindow):
             spin.setValue(value)
         self.fixed_absolute_checkbox.setChecked(obj.fixed_absolute)
         self.rigid_group_edit.setText(obj.rigid_group)
+        self._updating_dynamic_axis_angle = True
+        self.dynamic_axis_angle_spin.setValue(0.0)
+        self._last_dynamic_axis_angle = 0.0
+        self._updating_dynamic_axis_angle = False
         self._updating_controls = False
         self._set_controls_enabled(True)
+        self._update_dynamic_axis_controls()
 
     def _set_controls_enabled(self, enabled: bool) -> None:
         for spin in [*self.position_spins, *self.rotation_spins]:
@@ -1597,6 +1743,16 @@ class HexapodModeler(QMainWindow):
         self.target_combo.setEnabled(enabled and self.target_combo.count() > 0)
         self.fixed_absolute_checkbox.setEnabled(enabled)
         self.rigid_group_edit.setEnabled(enabled)
+        self._update_dynamic_axis_controls()
+
+    def _update_dynamic_axis_controls(self) -> None:
+        enabled = (
+            self.selected_name is not None
+            and self._dynamic_rotation_constraint_for(self.selected_name) is not None
+            and not self.objects[self.selected_name].fixed_absolute
+        )
+        self.dynamic_axis_angle_spin.setEnabled(enabled)
+        self.dynamic_axis_button.setEnabled(enabled)
 
     def _on_fixed_absolute_changed(self) -> None:
         if self._updating_controls or not self.selected_name:
@@ -1608,6 +1764,77 @@ class HexapodModeler(QMainWindow):
             return
         self.objects[self.selected_name].rigid_group = self.rigid_group_edit.text().strip()
 
+    def _dynamic_rotation_constraint_for(self, core_name: Optional[str]) -> Optional[ConstraintRecord]:
+        if not core_name:
+            return None
+        for constraint in self.constraints:
+            if constraint.type == "dynamic_rotation" and constraint.parameters.get("core_object") == core_name:
+                return constraint
+        return None
+
+    def _movement_affected_names(self, moved_name: str) -> set[str]:
+        names = {moved_name}
+        names.update(self._rigid_component_for(moved_name))
+        dynamic_constraint = self._dynamic_rotation_constraint_for(moved_name)
+        if dynamic_constraint is not None:
+            names.update(name for name in dynamic_constraint.parameters.get("driven_objects", []) if name in self.objects)
+        return {name for name in names if name in self.objects}
+
+    def _snapshot_objects(self, names: set[str]) -> dict[str, dict[str, list[float]]]:
+        snapshot = {}
+        for name in names:
+            if name not in self.objects:
+                continue
+            obj = self.objects[name]
+            snapshot[name] = {
+                "position": [float(value) for value in obj.position],
+                "rotation": [float(value) for value in obj.rotation],
+            }
+        return snapshot
+
+    def _push_pose_history(self, label: str, before: dict[str, dict[str, list[float]]], after: dict[str, dict[str, list[float]]]) -> None:
+        if self._restoring_history or before == after:
+            return
+        self.undo_stack.append(PoseAction(label=label, before=before, after=after))
+        self.redo_stack.clear()
+        self._update_history_actions()
+
+    def _update_history_actions(self) -> None:
+        self.undo_action.setEnabled(bool(self.undo_stack))
+        self.redo_action.setEnabled(bool(self.redo_stack))
+
+    def _restore_pose_snapshot(self, snapshot: dict[str, dict[str, list[float]]]) -> None:
+        self._restoring_history = True
+        try:
+            for name, pose in snapshot.items():
+                if name not in self.objects:
+                    continue
+                obj = self.objects[name]
+                obj.position = [float(value) for value in pose["position"]]
+                obj.rotation = [float(value) for value in pose["rotation"]]
+                self._apply_transform(name)
+            self._load_selected_into_controls()
+            self._highlight_selected()
+            self.plotter.render()
+        finally:
+            self._restoring_history = False
+
+    def undo_last_action(self) -> None:
+        if not self.undo_stack:
+            return
+        action = self.undo_stack.pop()
+        self.redo_stack.append(action)
+        self._restore_pose_snapshot(action.before)
+        self._update_history_actions()
+
+    def redo_last_action(self) -> None:
+        if not self.redo_stack:
+            return
+        action = self.redo_stack.pop()
+        self.undo_stack.append(action)
+        self._restore_pose_snapshot(action.after)
+        self._update_history_actions()
+
     def _on_transform_changed(self) -> None:
         if self._updating_controls or not self.selected_name:
             return
@@ -1616,13 +1843,19 @@ class HexapodModeler(QMainWindow):
             self.coincidence_status.setText(f"Constraint: '{obj.name}' is fixed absolute and cannot be moved.")
             self._load_selected_into_controls()
             return
+        affected_names = self._movement_affected_names(self.selected_name)
+        before = self._snapshot_objects(affected_names)
         old_matrix = self._transform_matrix_for(self.selected_name)
         obj.position = [spin.value() for spin in self.position_spins]
         obj.rotation = [spin.value() for spin in self.rotation_spins]
         self._apply_transform(self.selected_name)
-        self._propagate_rigid_group_delta(self.selected_name, old_matrix)
+        dynamic_rotation_applied = self._apply_dynamic_rotation_constraints(self.selected_name, old_matrix)
+        if not dynamic_rotation_applied:
+            self._propagate_rigid_group_delta(self.selected_name, old_matrix)
         self._enforce_constraints_after_move(self.selected_name)
         self._load_selected_into_controls()
+        after = self._snapshot_objects(affected_names)
+        self._push_pose_history(f"Move {self.selected_name}", before, after)
         self.plotter.render()
 
     def _apply_transform(self, name: str) -> None:
@@ -1675,6 +1908,133 @@ class HexapodModeler(QMainWindow):
         normal = self._rotation_matrix_for(object_name) @ local_normal
         length = np.linalg.norm(normal)
         return np.array([0.0, 0.0, 1.0]) if length <= 1e-9 else normal / length
+
+    def _world_axis_from_feature_data(self, feature: dict, matrix_overrides: Optional[dict[str, np.ndarray]] = None) -> Optional[tuple[np.ndarray, np.ndarray]]:
+        object_name = feature.get("object")
+        if object_name not in self.objects:
+            return None
+        matrix = matrix_overrides.get(object_name) if matrix_overrides else None
+        if matrix is None:
+            matrix = self._transform_matrix_for(object_name)
+        local_point = np.array(feature.get("local_axis_point", feature.get("local_point", [0.0, 0.0, 0.0])), dtype=float)
+        local_direction = np.array(feature.get("local_axis_direction", feature.get("local_normal", [0.0, 0.0, 1.0])), dtype=float)
+        point = self._transform_points(np.array([local_point]), matrix)[0]
+        direction = matrix[:3, :3] @ local_direction
+        length = np.linalg.norm(direction)
+        if length <= 1e-9:
+            return None
+        return point, direction / length
+
+    def _rotation_angle_about_axis(self, rotation_delta: np.ndarray, axis_direction: np.ndarray) -> float:
+        axis_direction = axis_direction / np.linalg.norm(axis_direction)
+        rotation_vector = np.array(
+            [
+                rotation_delta[2, 1] - rotation_delta[1, 2],
+                rotation_delta[0, 2] - rotation_delta[2, 0],
+                rotation_delta[1, 0] - rotation_delta[0, 1],
+            ]
+        )
+        sin_angle = float(np.dot(rotation_vector, axis_direction) * 0.5)
+        cos_angle = float(np.clip((np.trace(rotation_delta) - 1.0) * 0.5, -1.0, 1.0))
+        return math.atan2(sin_angle, cos_angle)
+
+    def _transform_about_world_axis(self, axis_point: np.ndarray, axis_direction: np.ndarray, angle: float) -> np.ndarray:
+        rotation = self._rotation_matrix_from_axis_angle(axis_direction / np.linalg.norm(axis_direction), angle)
+        matrix = np.identity(4)
+        matrix[:3, :3] = rotation
+        matrix[:3, 3] = axis_point - rotation @ axis_point
+        return matrix
+
+    def _on_dynamic_axis_angle_changed(self, value: float) -> None:
+        if self._updating_controls or self._updating_dynamic_axis_angle or not self.selected_name:
+            return
+        delta_degrees = float(value) - self._last_dynamic_axis_angle
+        self._last_dynamic_axis_angle = float(value)
+        if abs(delta_degrees) <= 1e-9:
+            return
+        if not self._rotate_selected_around_dynamic_axis_by(delta_degrees):
+            self._updating_dynamic_axis_angle = True
+            self.dynamic_axis_angle_spin.setValue(value - delta_degrees)
+            self._last_dynamic_axis_angle = float(value - delta_degrees)
+            self._updating_dynamic_axis_angle = False
+
+    def reset_dynamic_axis_angle(self) -> None:
+        self._updating_dynamic_axis_angle = True
+        self.dynamic_axis_angle_spin.setValue(0.0)
+        self._last_dynamic_axis_angle = 0.0
+        self._updating_dynamic_axis_angle = False
+
+    def _rotate_selected_around_dynamic_axis_by(self, angle_degrees: float) -> bool:
+        if not self.selected_name:
+            return False
+        constraint = self._dynamic_rotation_constraint_for(self.selected_name)
+        if constraint is None:
+            self.coincidence_status.setText("Dynamic rotation: selected object has no dynamic rotation constraint.")
+            return False
+        if self.objects[self.selected_name].fixed_absolute:
+            self.coincidence_status.setText(f"Constraint: '{self.selected_name}' is fixed absolute and cannot be moved.")
+            return False
+        if abs(angle_degrees) <= 1e-9:
+            return False
+        axis_feature = constraint.parameters.get("axis_feature")
+        world_axis = self._world_axis_from_feature_data(axis_feature) if axis_feature else None
+        if world_axis is None:
+            self.coincidence_status.setText("Dynamic rotation: live axis is unavailable.")
+            return False
+
+        affected_names = self._movement_affected_names(self.selected_name)
+        before = self._snapshot_objects(affected_names)
+        axis_point, axis_direction = world_axis
+        axis_transform = self._transform_about_world_axis(axis_point, axis_direction, math.radians(angle_degrees))
+        self._set_pose_from_matrix(self.selected_name, axis_transform @ self._transform_matrix_for(self.selected_name))
+        for name in constraint.parameters.get("driven_objects", []):
+            if name not in self.objects or name == self.selected_name:
+                continue
+            if self.objects[name].fixed_absolute:
+                continue
+            self._set_pose_from_matrix(name, axis_transform @ self._transform_matrix_for(name))
+        self._enforce_constraints_after_move(self.selected_name)
+        self._load_selected_into_controls()
+        after = self._snapshot_objects(affected_names)
+        self._push_pose_history(f"Dynamic rotate {self.selected_name}", before, after)
+        self.coincidence_status.setText(f"Dynamic rotation: '{self.selected_name}' rotated {angle_degrees:.3f} deg around its live axis.")
+        self.plotter.render()
+        return True
+
+    def _apply_dynamic_rotation_constraints(self, moved_name: str, old_moved_matrix: np.ndarray) -> bool:
+        applied = False
+        requested_matrix = self._transform_matrix_for(moved_name)
+        old_rotation = old_moved_matrix[:3, :3]
+        requested_rotation = requested_matrix[:3, :3]
+        rotation_delta = requested_rotation @ old_rotation.T
+
+        for constraint in self.constraints:
+            if constraint.type != "dynamic_rotation":
+                continue
+            if constraint.parameters.get("core_object") != moved_name:
+                continue
+            axis_feature = constraint.parameters.get("axis_feature")
+            if not axis_feature:
+                continue
+            axis_matrix_overrides = {moved_name: old_moved_matrix}
+            world_axis = self._world_axis_from_feature_data(axis_feature, axis_matrix_overrides)
+            if world_axis is None:
+                continue
+            axis_point, axis_direction = world_axis
+            angle = self._rotation_angle_about_axis(rotation_delta, axis_direction)
+            if abs(angle) <= 1e-9:
+                continue
+
+            axis_transform = self._transform_about_world_axis(axis_point, axis_direction, angle)
+            self._set_pose_from_matrix(moved_name, axis_transform @ old_moved_matrix)
+            for name in constraint.parameters.get("driven_objects", []):
+                if name not in self.objects or name == moved_name:
+                    continue
+                if self.objects[name].fixed_absolute:
+                    continue
+                self._set_pose_from_matrix(name, axis_transform @ self._transform_matrix_for(name))
+            return True
+        return applied
 
     def _enforce_constraints_after_move(self, moved_name: str) -> None:
         if self._solving_constraints:
@@ -1787,11 +2147,20 @@ class HexapodModeler(QMainWindow):
         if selected_axis != target_axis:
             QMessageBox.information(self, "Alignment", "This first alignment tool works on parallel bounding planes. Choose features on the same axis.")
             return
+        if self.objects[selected].fixed_absolute:
+            self.coincidence_status.setText(f"Constraint: '{selected}' is fixed absolute and cannot be moved.")
+            return
+        affected_names = self._movement_affected_names(selected)
+        before = self._snapshot_objects(affected_names)
         axis_index = AXIS_INDEX[selected_axis]
         delta = self._feature_value(target, target_feature) - self._feature_value(selected, selected_feature)
+        old_matrix = self._transform_matrix_for(selected)
         self.objects[selected].position[axis_index] += delta
         self._apply_transform(selected)
+        self._propagate_rigid_group_delta(selected, old_matrix)
         self._load_selected_into_controls()
+        after = self._snapshot_objects(affected_names)
+        self._push_pose_history(f"Align {selected}", before, after)
         self.plotter.render()
 
     def align_selected_center_to_target(self) -> None:
@@ -1799,11 +2168,20 @@ class HexapodModeler(QMainWindow):
         if not selected or not target:
             QMessageBox.information(self, "Alignment", "Select one object, then choose a different target object.")
             return
+        if self.objects[selected].fixed_absolute:
+            self.coincidence_status.setText(f"Constraint: '{selected}' is fixed absolute and cannot be moved.")
+            return
+        affected_names = self._movement_affected_names(selected)
+        before = self._snapshot_objects(affected_names)
+        old_matrix = self._transform_matrix_for(selected)
         delta = self._world_center_for(target) - self._world_center_for(selected)
         obj = self.objects[selected]
         obj.position = [obj.position[i] + float(delta[i]) for i in range(3)]
         self._apply_transform(selected)
+        self._propagate_rigid_group_delta(selected, old_matrix)
         self._load_selected_into_controls()
+        after = self._snapshot_objects(affected_names)
+        self._push_pose_history(f"Center align {selected}", before, after)
         self.plotter.render()
 
     def copy_target_rotation_to_selected(self) -> None:
@@ -1811,9 +2189,18 @@ class HexapodModeler(QMainWindow):
         if not selected or not target:
             QMessageBox.information(self, "Alignment", "Select one object, then choose a different target object.")
             return
+        if self.objects[selected].fixed_absolute:
+            self.coincidence_status.setText(f"Constraint: '{selected}' is fixed absolute and cannot be moved.")
+            return
+        affected_names = self._movement_affected_names(selected)
+        before = self._snapshot_objects(affected_names)
+        old_matrix = self._transform_matrix_for(selected)
         self.objects[selected].rotation = list(self.objects[target].rotation)
         self._apply_transform(selected)
+        self._propagate_rigid_group_delta(selected, old_matrix)
         self._load_selected_into_controls()
+        after = self._snapshot_objects(affected_names)
+        self._push_pose_history(f"Copy rotation {selected}", before, after)
         self.plotter.render()
 
     def _highlight_selected(self) -> None:
@@ -1836,12 +2223,16 @@ class HexapodModeler(QMainWindow):
         if self.objects[self.selected_name].fixed_absolute:
             self.coincidence_status.setText(f"Constraint: '{self.selected_name}' is fixed absolute and cannot be moved.")
             return
+        affected_names = self._movement_affected_names(self.selected_name)
+        before = self._snapshot_objects(affected_names)
         old_matrix = self._transform_matrix_for(self.selected_name)
         self.objects[self.selected_name].position = [0.0, 0.0, 0.0]
         self._apply_transform(self.selected_name)
         self._propagate_rigid_group_delta(self.selected_name, old_matrix)
         self._enforce_constraints_after_move(self.selected_name)
         self._load_selected_into_controls()
+        after = self._snapshot_objects(affected_names)
+        self._push_pose_history(f"Move {self.selected_name} to origin", before, after)
         self.plotter.render()
 
     def remove_selected_model(self) -> None:
@@ -1875,6 +2266,7 @@ class HexapodModeler(QMainWindow):
         if self.constraint_hover_object_name == name:
             self.constraint_hover_object_name = None
         self._refresh_alignment_targets()
+        self._update_dynamic_axis_controls()
         self._highlight_selected()
         self.plotter.render()
 
@@ -1917,12 +2309,13 @@ class HexapodModeler(QMainWindow):
         self.next_constraint_id = 1
         for raw in constraint_data:
             remapped_objects = [name_map.get(name, name) for name in raw.get("objects", []) if name_map.get(name, name) in self.objects]
+            parameters = self._remap_constraint_parameters(raw.get("parameters", {}), name_map)
             constraint = ConstraintRecord(
                 id=int(raw.get("id", self.next_constraint_id)),
                 type=raw.get("type", "other"),
                 name=raw.get("name", "Constraint"),
                 objects=remapped_objects,
-                parameters=raw.get("parameters", {}),
+                parameters=parameters,
             )
             self.constraints.append(constraint)
             self.next_constraint_id = max(self.next_constraint_id, constraint.id + 1)
@@ -1930,7 +2323,30 @@ class HexapodModeler(QMainWindow):
 
         self._rebuild_constraints_tree()
         self._refresh_alignment_targets()
+        self._update_dynamic_axis_controls()
         self.plotter.reset_camera()
+
+    def _remap_constraint_parameters(self, parameters: dict, name_map: dict[str, str]) -> dict:
+        remapped = json.loads(json.dumps(parameters))
+
+        def remap_name(name: str) -> str:
+            return name_map.get(name, name)
+
+        if "constrained_object" in remapped:
+            remapped["constrained_object"] = remap_name(remapped["constrained_object"])
+        if "core_object" in remapped:
+            remapped["core_object"] = remap_name(remapped["core_object"])
+        if "driven_objects" in remapped:
+            remapped["driven_objects"] = [remap_name(name) for name in remapped["driven_objects"]]
+
+        for key in ("picked_features",):
+            for feature in remapped.get(key, []):
+                if "object" in feature:
+                    feature["object"] = remap_name(feature["object"])
+        axis_feature = remapped.get("axis_feature")
+        if axis_feature and "object" in axis_feature:
+            axis_feature["object"] = remap_name(axis_feature["object"])
+        return remapped
 
     def clear_scene(self) -> None:
         for name in list(self.objects):
@@ -1943,6 +2359,9 @@ class HexapodModeler(QMainWindow):
         self.constraints.clear()
         self.next_constraint_id = 1
         self.constraints_tree.clear()
+        self.undo_stack.clear()
+        self.redo_stack.clear()
+        self._update_history_actions()
         dialog = self.constraint_dialog
         self.constraint_dialog = None
         if dialog is not None:
@@ -1973,6 +2392,7 @@ class HexapodModeler(QMainWindow):
         self._clear_pick_highlights(render=False)
         self._set_controls_enabled(False)
         self._refresh_alignment_targets()
+        self._update_dynamic_axis_controls()
 
     def reset_camera(self) -> None:
         self.plotter.camera_position = "iso"
