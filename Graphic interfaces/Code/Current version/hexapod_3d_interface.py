@@ -55,6 +55,26 @@ ALIGNMENT_FEATURES = [
     ("Z max plane", ("z", "max")),
 ]
 AXIS_INDEX = {"x": 0, "y": 1, "z": 2}
+JOINT_LABELS = [
+    "front_left_coxa_joint",
+    "front_left_femur_joint",
+    "front_left_tibia_joint",
+    "middle_left_coxa_joint",
+    "middle_left_femur_joint",
+    "middle_left_tibia_joint",
+    "rear_left_coxa_joint",
+    "rear_left_femur_joint",
+    "rear_left_tibia_joint",
+    "front_right_coxa_joint",
+    "front_right_femur_joint",
+    "front_right_tibia_joint",
+    "middle_right_coxa_joint",
+    "middle_right_femur_joint",
+    "middle_right_tibia_joint",
+    "rear_right_coxa_joint",
+    "rear_right_femur_joint",
+    "rear_right_tibia_joint",
+]
 SURFACE_ANGLE_TOLERANCE_DEG = 8.0
 SURFACE_PLANE_TOLERANCE_RATIO = 0.002
 SURFACE_MIN_PLANE_TOLERANCE = 0.05
@@ -292,6 +312,7 @@ class HexapodModeler(QMainWindow):
         self.mesh_topologies: dict[str, MeshTopology] = {}
         self.actors = {}
         self.selected_name: Optional[str] = None
+        self.workspace_mode = "geometry"
         self.coincidence_mode = False
         self.coincidence_dialog: Optional[CoincidenceDialog] = None
         self.coincidence_picks: list[PickedSurface] = []
@@ -308,7 +329,9 @@ class HexapodModeler(QMainWindow):
         self._solving_constraints = False
         self._restoring_history = False
         self._updating_dynamic_axis_angle = False
+        self._updating_joint_controls = False
         self._last_dynamic_axis_angle = 0.0
+        self._last_logic_joint_angle = 0.0
         self.undo_stack: list[PoseAction] = []
         self.redo_stack: list[PoseAction] = []
         self.display_mode = "sharp"
@@ -319,8 +342,8 @@ class HexapodModeler(QMainWindow):
         self._build_scene()
 
     def _build_ui(self) -> None:
-        import_action = QAction("Import STL/STP", self)
-        import_action.triggered.connect(self.import_model)
+        self.import_action = QAction("Import STL/STP", self)
+        self.import_action.triggered.connect(self.import_model)
         save_action = QAction("Save layout", self)
         save_action.triggered.connect(self.save_layout)
         load_action = QAction("Load layout", self)
@@ -335,10 +358,16 @@ class HexapodModeler(QMainWindow):
         self.redo_action.setShortcut("Ctrl+Y")
         self.redo_action.setEnabled(False)
         self.redo_action.triggered.connect(self.redo_last_action)
+        self.mode_combo = QComboBox()
+        self.mode_combo.addItem("Set Hexapod Geometry and constraints", "geometry")
+        self.mode_combo.addItem("Hexapod movement logic", "movement_logic")
+        self.mode_combo.currentIndexChanged.connect(self._on_workspace_mode_changed)
 
         toolbar = self.addToolBar("Main tools")
         toolbar.setMovable(False)
-        toolbar.addAction(import_action)
+        toolbar.addWidget(self.mode_combo)
+        toolbar.addSeparator()
+        toolbar.addAction(self.import_action)
         toolbar.addAction(save_action)
         toolbar.addAction(load_action)
         toolbar.addAction(reset_camera_action)
@@ -371,8 +400,8 @@ class HexapodModeler(QMainWindow):
         self.constraints_tree.setTextElideMode(Qt.ElideRight)
         self.constraints_tree.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.constraints_tree.setStyleSheet("QTreeWidget::item { min-height: 22px; }")
-        add_constraint_button = QPushButton("Add constraint")
-        add_constraint_button.clicked.connect(self.add_constraint)
+        self.add_constraint_button = QPushButton("Add constraint")
+        self.add_constraint_button.clicked.connect(self.add_constraint)
         self.finish_constraint_button = QPushButton("Finish constraint")
         self.finish_constraint_button.setEnabled(False)
         self.finish_constraint_button.clicked.connect(self.finish_constraint_picking)
@@ -447,8 +476,28 @@ class HexapodModeler(QMainWindow):
         self.selected_feature_combo.setEnabled(False)
         self.target_feature_combo.setEnabled(False)
 
+        self.logic_selected_label = QLabel("Selected dynamic core: none")
+        self.logic_selected_label.setWordWrap(True)
+        self.joint_label_combo = QComboBox()
+        self.joint_label_combo.addItem("Unassigned", "")
+        for label in JOINT_LABELS:
+            self.joint_label_combo.addItem(label, label)
+        self.joint_label_combo.setEnabled(False)
+        self.joint_label_combo.currentIndexChanged.connect(self._on_joint_metadata_changed)
+        self.joint_initial_angle_spin = self._make_spinbox(-360, 360, 1.0)
+        self.joint_initial_angle_spin.setEnabled(False)
+        self.joint_initial_angle_spin.valueChanged.connect(self._on_joint_metadata_changed)
+        self.joint_direction_combo = QComboBox()
+        self.joint_direction_combo.addItem("Positive increment", 1.0)
+        self.joint_direction_combo.addItem("Negative increment", -1.0)
+        self.joint_direction_combo.setEnabled(False)
+        self.joint_direction_combo.currentIndexChanged.connect(self._on_joint_metadata_changed)
+        self.logic_joint_angle_spin = self._make_spinbox(-360, 360, 1.0)
+        self.logic_joint_angle_spin.setEnabled(False)
+        self.logic_joint_angle_spin.valueChanged.connect(self._on_logic_joint_angle_changed)
+
         scene_tree_panel = ResizableSection("Scene tree", [self.tree], initial_height=230)
-        constraints_tree_panel = ResizableSection("Constraints", [self.constraints_tree, add_constraint_button], initial_height=270)
+        constraints_tree_panel = ResizableSection("Constraints", [self.constraints_tree, self.add_constraint_button], initial_height=270)
 
         controls_panel = QWidget()
         controls_panel.setObjectName("controlsPanel")
@@ -465,6 +514,24 @@ class HexapodModeler(QMainWindow):
         controls_layout.addStretch(1)
         controls_panel.setMinimumHeight(420)
 
+        movement_logic_panel = QWidget()
+        movement_logic_panel.setObjectName("movementLogicPanel")
+        movement_logic_panel.setStyleSheet("QWidget#movementLogicPanel { border-bottom: 1px solid #343a42; }")
+        movement_logic_layout = QVBoxLayout(movement_logic_panel)
+        movement_logic_layout.setContentsMargins(12, 8, 10, 8)
+        movement_logic_form = QFormLayout()
+        movement_logic_form.addRow(self.logic_selected_label)
+        movement_logic_form.addRow("Joint label", self.joint_label_combo)
+        movement_logic_form.addRow("Initial angle deg", self.joint_initial_angle_spin)
+        movement_logic_form.addRow("Increment direction", self.joint_direction_combo)
+        movement_logic_form.addRow("Joint move deg", self.logic_joint_angle_spin)
+        movement_logic_layout.addWidget(QLabel("Hexapod movement logic"))
+        movement_logic_layout.addLayout(movement_logic_form)
+        movement_logic_layout.addStretch(1)
+        movement_logic_panel.setMinimumHeight(300)
+        self.geometry_controls_panel = controls_panel
+        self.movement_logic_panel = movement_logic_panel
+
         side_panel = QWidget()
         side_panel.setMinimumHeight(800)
         side_layout = QVBoxLayout(side_panel)
@@ -473,6 +540,7 @@ class HexapodModeler(QMainWindow):
         side_layout.addWidget(scene_tree_panel)
         side_layout.addWidget(constraints_tree_panel)
         side_layout.addWidget(controls_panel)
+        side_layout.addWidget(movement_logic_panel)
         side_layout.addStretch(1)
 
 
@@ -496,6 +564,7 @@ class HexapodModeler(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(splitter)
         self.setCentralWidget(container)
+        self._apply_workspace_mode()
 
     def _build_scene(self) -> None:
         self.plotter.set_background("#1f2329")
@@ -541,6 +610,8 @@ class HexapodModeler(QMainWindow):
         return spin
 
     def import_model(self) -> None:
+        if self.workspace_mode != "geometry":
+            return
         file_path, _ = QFileDialog.getOpenFileName(self, "Import 3D model", "", "3D models (*.stl *.step *.stp);;STL (*.stl);;STEP (*.step *.stp)")
         if not file_path:
             return
@@ -977,6 +1048,8 @@ class HexapodModeler(QMainWindow):
             self._render()
 
     def toggle_coincidence_mode(self) -> None:
+        if self.workspace_mode != "geometry":
+            return
         if self.constraint_pick_mode:
             self._reset_constraint_picking(clear_highlights=True, close_dialog=True)
         if self.coincidence_mode:
@@ -1232,6 +1305,8 @@ class HexapodModeler(QMainWindow):
                 return
 
     def add_constraint(self) -> None:
+        if self.workspace_mode != "geometry":
+            return
         if not self.objects:
             QMessageBox.information(self, "Add constraint", "Import at least one 3D object first.")
             return
@@ -1653,6 +1728,9 @@ class HexapodModeler(QMainWindow):
             )
         elif constraint.type == "dynamic_rotation":
             constraint.parameters.setdefault("status", "active")
+            constraint.parameters.setdefault("joint_label", "")
+            constraint.parameters.setdefault("initial_angle_degrees", 0.0)
+            constraint.parameters.setdefault("increment_sign", 1.0)
             constraint.parameters.setdefault("note", "When the core object rotates, the core and driven objects rotate around the current live axis.")
         if self.selected_name:
             self._load_selected_into_controls()
@@ -1810,23 +1888,105 @@ class HexapodModeler(QMainWindow):
         self._update_dynamic_axis_controls()
 
     def _set_controls_enabled(self, enabled: bool) -> None:
+        geometry_enabled = enabled and self.workspace_mode == "geometry"
         for spin in [*self.position_spins, *self.rotation_spins]:
-            spin.setEnabled(enabled)
-        self.selected_feature_combo.setEnabled(enabled)
-        self.target_feature_combo.setEnabled(enabled and self.target_combo.count() > 0)
-        self.target_combo.setEnabled(enabled and self.target_combo.count() > 0)
-        self.fixed_absolute_checkbox.setEnabled(enabled)
-        self.rigid_group_edit.setEnabled(enabled)
+            spin.setEnabled(geometry_enabled)
+        self.selected_feature_combo.setEnabled(geometry_enabled)
+        self.target_feature_combo.setEnabled(geometry_enabled and self.target_combo.count() > 0)
+        self.target_combo.setEnabled(geometry_enabled and self.target_combo.count() > 0)
+        self.fixed_absolute_checkbox.setEnabled(geometry_enabled)
+        self.rigid_group_edit.setEnabled(geometry_enabled)
         self._update_dynamic_axis_controls()
+        self._load_selected_into_joint_controls()
 
     def _update_dynamic_axis_controls(self) -> None:
         enabled = (
+            self.workspace_mode == "geometry" and
             self.selected_name is not None
             and self._dynamic_rotation_constraint_for(self.selected_name) is not None
             and not self.objects[self.selected_name].fixed_absolute
         )
         self.dynamic_axis_angle_spin.setEnabled(enabled)
         self.dynamic_axis_button.setEnabled(enabled)
+
+    def _on_workspace_mode_changed(self) -> None:
+        self.workspace_mode = self.mode_combo.currentData()
+        self._apply_workspace_mode()
+
+    def _apply_workspace_mode(self) -> None:
+        is_geometry_mode = self.workspace_mode == "geometry"
+        if not is_geometry_mode:
+            if self.constraint_pick_mode:
+                self._reset_constraint_picking(clear_highlights=True, close_dialog=True)
+            if self.coincidence_mode:
+                self.exit_coincidence_mode()
+        self.geometry_controls_panel.setVisible(is_geometry_mode)
+        self.movement_logic_panel.setVisible(not is_geometry_mode)
+        self.import_action.setEnabled(is_geometry_mode)
+        self.add_constraint_button.setEnabled(is_geometry_mode)
+        self.constraints_tree.setEnabled(is_geometry_mode)
+        self.coincidence_button.setEnabled(is_geometry_mode)
+        self._set_controls_enabled(self.selected_name is not None)
+        self._load_selected_into_joint_controls()
+
+    def _load_selected_into_joint_controls(self) -> None:
+        if not hasattr(self, "joint_label_combo"):
+            return
+        constraint = self._dynamic_rotation_constraint_for(self.selected_name)
+        enabled = self.workspace_mode == "movement_logic" and constraint is not None
+        self._updating_joint_controls = True
+        try:
+            if constraint is None:
+                selected_text = self.selected_name or "none"
+                self.logic_selected_label.setText(f"Selected dynamic core: {selected_text}")
+                self.joint_label_combo.setCurrentIndex(0)
+                self.joint_initial_angle_spin.setValue(0.0)
+                self.joint_direction_combo.setCurrentIndex(0)
+            else:
+                self.logic_selected_label.setText(f"Selected dynamic core: {constraint.parameters.get('core_object', self.selected_name)}")
+                label = constraint.parameters.get("joint_label", "")
+                index = self.joint_label_combo.findData(label)
+                self.joint_label_combo.setCurrentIndex(index if index >= 0 else 0)
+                self.joint_initial_angle_spin.setValue(float(constraint.parameters.get("initial_angle_degrees", 0.0)))
+                direction = float(constraint.parameters.get("increment_sign", 1.0))
+                direction_index = self.joint_direction_combo.findData(direction)
+                self.joint_direction_combo.setCurrentIndex(direction_index if direction_index >= 0 else 0)
+            self.logic_joint_angle_spin.setValue(0.0)
+            self._last_logic_joint_angle = 0.0
+        finally:
+            self._updating_joint_controls = False
+        self.joint_label_combo.setEnabled(enabled)
+        self.joint_initial_angle_spin.setEnabled(enabled)
+        self.joint_direction_combo.setEnabled(enabled)
+        self.logic_joint_angle_spin.setEnabled(enabled and not self.objects[self.selected_name].fixed_absolute if self.selected_name else False)
+
+    def _on_joint_metadata_changed(self) -> None:
+        if self._updating_joint_controls:
+            return
+        constraint = self._dynamic_rotation_constraint_for(self.selected_name)
+        if constraint is None:
+            return
+        constraint.parameters["joint_label"] = self.joint_label_combo.currentData()
+        constraint.parameters["initial_angle_degrees"] = float(self.joint_initial_angle_spin.value())
+        constraint.parameters["increment_sign"] = float(self.joint_direction_combo.currentData())
+        self._rebuild_constraints_tree()
+
+    def _on_logic_joint_angle_changed(self, value: float) -> None:
+        if self._updating_joint_controls or self.workspace_mode != "movement_logic" or not self.selected_name:
+            return
+        constraint = self._dynamic_rotation_constraint_for(self.selected_name)
+        if constraint is None:
+            return
+        delta_degrees = float(value) - self._last_logic_joint_angle
+        self._last_logic_joint_angle = float(value)
+        if abs(delta_degrees) <= 1e-9:
+            return
+        increment_sign = float(constraint.parameters.get("increment_sign", 1.0))
+        if not self._rotate_core_around_dynamic_axis_by(self.selected_name, delta_degrees * increment_sign):
+            self._updating_joint_controls = True
+            self.logic_joint_angle_spin.setValue(value - delta_degrees)
+            self._last_logic_joint_angle = float(value - delta_degrees)
+            self._updating_joint_controls = False
 
     def _on_fixed_absolute_changed(self) -> None:
         if self._updating_controls or not self.selected_name:
@@ -1910,7 +2070,7 @@ class HexapodModeler(QMainWindow):
         self._update_history_actions()
 
     def _on_transform_changed(self) -> None:
-        if self._updating_controls or not self.selected_name:
+        if self.workspace_mode != "geometry" or self._updating_controls or not self.selected_name:
             return
         obj = self.objects[self.selected_name]
         if obj.fixed_absolute:
@@ -2041,12 +2201,15 @@ class HexapodModeler(QMainWindow):
     def _rotate_selected_around_dynamic_axis_by(self, angle_degrees: float) -> bool:
         if not self.selected_name:
             return False
-        constraint = self._dynamic_rotation_constraint_for(self.selected_name)
+        return self._rotate_core_around_dynamic_axis_by(self.selected_name, angle_degrees)
+
+    def _rotate_core_around_dynamic_axis_by(self, core_name: str, angle_degrees: float) -> bool:
+        constraint = self._dynamic_rotation_constraint_for(core_name)
         if constraint is None:
             self.coincidence_status.setText("Dynamic rotation: selected object has no dynamic rotation constraint.")
             return False
-        if self.objects[self.selected_name].fixed_absolute:
-            self.coincidence_status.setText(f"Constraint: '{self.selected_name}' is fixed absolute and cannot be moved.")
+        if self.objects[core_name].fixed_absolute:
+            self.coincidence_status.setText(f"Constraint: '{core_name}' is fixed absolute and cannot be moved.")
             return False
         if abs(angle_degrees) <= 1e-9:
             return False
@@ -2056,22 +2219,23 @@ class HexapodModeler(QMainWindow):
             self.coincidence_status.setText("Dynamic rotation: live axis is unavailable.")
             return False
 
-        affected_names = self._movement_affected_names(self.selected_name)
+        affected_names = self._movement_affected_names(core_name)
         before = self._snapshot_objects(affected_names)
         axis_point, axis_direction = world_axis
         axis_transform = self._transform_about_world_axis(axis_point, axis_direction, math.radians(angle_degrees))
-        self._set_pose_from_matrix(self.selected_name, axis_transform @ self._transform_matrix_for(self.selected_name))
+        self._set_pose_from_matrix(core_name, axis_transform @ self._transform_matrix_for(core_name))
         for name in constraint.parameters.get("driven_objects", []):
-            if name not in self.objects or name == self.selected_name:
+            if name not in self.objects or name == core_name:
                 continue
             if self.objects[name].fixed_absolute:
                 continue
             self._set_pose_from_matrix(name, axis_transform @ self._transform_matrix_for(name))
-        self._enforce_constraints_after_move(self.selected_name)
-        self._load_selected_into_controls()
+        self._enforce_constraints_after_move(core_name)
+        if self.selected_name:
+            self._load_selected_into_controls()
         after = self._snapshot_objects(affected_names)
-        self._push_pose_history(f"Dynamic rotate {self.selected_name}", before, after)
-        self.coincidence_status.setText(f"Dynamic rotation: '{self.selected_name}' rotated {angle_degrees:.3f} deg around its live axis.")
+        self._push_pose_history(f"Dynamic rotate {core_name}", before, after)
+        self.coincidence_status.setText(f"Dynamic rotation: '{core_name}' rotated {angle_degrees:.3f} deg around its live axis.")
         self._render()
         return True
 
