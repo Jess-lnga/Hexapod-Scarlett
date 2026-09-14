@@ -498,6 +498,14 @@ class HexapodModeler(QMainWindow):
         self.set_zero_position_button = QPushButton("Set zero pos")
         self.set_zero_position_button.setEnabled(False)
         self.set_zero_position_button.clicked.connect(self.set_selected_joint_zero_position)
+        self.joint_min_angle_spin = self._make_spinbox(-360, 360, 1.0)
+        self.joint_min_angle_spin.setValue(-360.0)
+        self.joint_min_angle_spin.setEnabled(False)
+        self.joint_min_angle_spin.valueChanged.connect(self._on_joint_metadata_changed)
+        self.joint_max_angle_spin = self._make_spinbox(-360, 360, 1.0)
+        self.joint_max_angle_spin.setValue(360.0)
+        self.joint_max_angle_spin.setEnabled(False)
+        self.joint_max_angle_spin.valueChanged.connect(self._on_joint_metadata_changed)
         self.joint_direction_combo = QComboBox()
         self.joint_direction_combo.addItem("Positive increment", 1.0)
         self.joint_direction_combo.addItem("Negative increment", -1.0)
@@ -556,6 +564,8 @@ class HexapodModeler(QMainWindow):
         movement_logic_form.addRow("Joint label", self.joint_label_combo)
         movement_logic_form.addRow("Joint angle deg", self.joint_angle_spin)
         movement_logic_form.addRow(self.set_zero_position_button)
+        movement_logic_form.addRow("Min angle deg", self.joint_min_angle_spin)
+        movement_logic_form.addRow("Max angle deg", self.joint_max_angle_spin)
         movement_logic_form.addRow("Increment direction", self.joint_direction_combo)
         movement_logic_form.addRow("Joint step deg", self.logic_joint_step_spin)
         movement_logic_form.addRow("Move joint", logic_joint_buttons)
@@ -1741,6 +1751,8 @@ class HexapodModeler(QMainWindow):
                 "driven_objects": list(self.pending_constraint_objects[1:]),
                 "joint_label": "",
                 "joint_angle_degrees": 0.0,
+                "min_angle_degrees": -360.0,
+                "max_angle_degrees": 360.0,
                 "increment_sign": 1.0,
                 "zero_pose": {},
             }
@@ -1800,6 +1812,8 @@ class HexapodModeler(QMainWindow):
                 "joint_angle_degrees",
                 float(constraint.parameters.get("initial_angle_degrees", 0.0)),
             )
+            constraint.parameters.setdefault("min_angle_degrees", -360.0)
+            constraint.parameters.setdefault("max_angle_degrees", 360.0)
             constraint.parameters.setdefault("increment_sign", 1.0)
             constraint.parameters.setdefault("zero_pose", {})
             constraint.parameters.setdefault("note", "When the core object rotates, the core and driven objects rotate around the current live axis.")
@@ -2017,6 +2031,8 @@ class HexapodModeler(QMainWindow):
                 self.logic_selected_label.setText(f"Selected dynamic core: {selected_text}")
                 self.joint_label_combo.setCurrentIndex(0)
                 self.joint_angle_spin.setValue(0.0)
+                self.joint_min_angle_spin.setValue(-360.0)
+                self.joint_max_angle_spin.setValue(360.0)
                 self.joint_direction_combo.setCurrentIndex(0)
             else:
                 self.logic_selected_label.setText(f"Selected dynamic core: {constraint.parameters.get('core_object', self.selected_name)}")
@@ -2024,6 +2040,8 @@ class HexapodModeler(QMainWindow):
                 index = self.joint_label_combo.findData(label)
                 self.joint_label_combo.setCurrentIndex(index if index >= 0 else 0)
                 self.joint_angle_spin.setValue(float(constraint.parameters.get("joint_angle_degrees", 0.0)))
+                self.joint_min_angle_spin.setValue(float(constraint.parameters.get("min_angle_degrees", -360.0)))
+                self.joint_max_angle_spin.setValue(float(constraint.parameters.get("max_angle_degrees", 360.0)))
                 direction = float(constraint.parameters.get("increment_sign", 1.0))
                 direction_index = self.joint_direction_combo.findData(direction)
                 self.joint_direction_combo.setCurrentIndex(direction_index if direction_index >= 0 else 0)
@@ -2032,11 +2050,22 @@ class HexapodModeler(QMainWindow):
         self.joint_label_combo.setEnabled(enabled)
         self.joint_angle_spin.setEnabled(enabled)
         self.set_zero_position_button.setEnabled(enabled)
+        self.joint_min_angle_spin.setEnabled(enabled)
+        self.joint_max_angle_spin.setEnabled(enabled)
         self.joint_direction_combo.setEnabled(enabled)
         motion_enabled = enabled and not self.objects[self.selected_name].fixed_absolute if self.selected_name else False
         self.logic_joint_step_spin.setEnabled(motion_enabled)
-        self.logic_joint_minus_button.setEnabled(motion_enabled)
-        self.logic_joint_plus_button.setEnabled(motion_enabled)
+        if constraint is None:
+            self.logic_joint_minus_button.setEnabled(False)
+            self.logic_joint_plus_button.setEnabled(False)
+        else:
+            current_angle = float(constraint.parameters.get("joint_angle_degrees", 0.0))
+            min_angle = float(constraint.parameters.get("min_angle_degrees", -360.0))
+            max_angle = float(constraint.parameters.get("max_angle_degrees", 360.0))
+            if min_angle > max_angle:
+                min_angle, max_angle = max_angle, min_angle
+            self.logic_joint_minus_button.setEnabled(motion_enabled and current_angle > min_angle + 1e-9)
+            self.logic_joint_plus_button.setEnabled(motion_enabled and current_angle < max_angle - 1e-9)
 
     def _on_joint_metadata_changed(self) -> None:
         if self._updating_joint_controls:
@@ -2044,7 +2073,21 @@ class HexapodModeler(QMainWindow):
         constraint = self._dynamic_rotation_constraint_for(self.selected_name)
         if constraint is None:
             return
+        min_angle = float(self.joint_min_angle_spin.value())
+        max_angle = float(self.joint_max_angle_spin.value())
+        if min_angle > max_angle:
+            sender = self.sender()
+            self._updating_joint_controls = True
+            if sender is self.joint_min_angle_spin:
+                max_angle = min_angle
+                self.joint_max_angle_spin.setValue(max_angle)
+            else:
+                min_angle = max_angle
+                self.joint_min_angle_spin.setValue(min_angle)
+            self._updating_joint_controls = False
         constraint.parameters["joint_label"] = self.joint_label_combo.currentData()
+        constraint.parameters["min_angle_degrees"] = min_angle
+        constraint.parameters["max_angle_degrees"] = max_angle
         constraint.parameters["increment_sign"] = float(self.joint_direction_combo.currentData())
         self._rebuild_constraints_tree()
         self._rebuild_legs_tree()
@@ -2101,10 +2144,23 @@ class HexapodModeler(QMainWindow):
         constraint = self._dynamic_rotation_constraint_for(self.selected_name)
         if constraint is None:
             return
-        step_degrees = float(self.logic_joint_step_spin.value()) * float(direction)
+        current_angle = float(constraint.parameters.get("joint_angle_degrees", 0.0))
+        min_angle = float(constraint.parameters.get("min_angle_degrees", -360.0))
+        max_angle = float(constraint.parameters.get("max_angle_degrees", 360.0))
+        if min_angle > max_angle:
+            min_angle, max_angle = max_angle, min_angle
+        requested_step = float(self.logic_joint_step_spin.value()) * float(direction)
+        target_angle = float(np.clip(current_angle + requested_step, min_angle, max_angle))
+        actual_step = target_angle - current_angle
+        if abs(actual_step) <= 1e-9:
+            self.coincidence_status.setText(
+                f"Joint limit: '{self.selected_name}' is already at {current_angle:.3f} deg "
+                f"within [{min_angle:.3f}, {max_angle:.3f}] deg."
+            )
+            return
         increment_sign = float(constraint.parameters.get("increment_sign", 1.0))
-        if self._rotate_core_around_dynamic_axis_by(self.selected_name, step_degrees * increment_sign):
-            constraint.parameters["joint_angle_degrees"] = float(constraint.parameters.get("joint_angle_degrees", 0.0)) + step_degrees
+        if self._rotate_core_around_dynamic_axis_by(self.selected_name, actual_step * increment_sign):
+            constraint.parameters["joint_angle_degrees"] = target_angle
             self._load_selected_into_joint_controls()
             self._rebuild_constraints_tree()
             self._rebuild_legs_tree()
