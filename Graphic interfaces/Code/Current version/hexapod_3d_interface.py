@@ -338,8 +338,10 @@ class HexapodModeler(QMainWindow):
         self._restoring_history = False
         self._updating_dynamic_axis_angle = False
         self._updating_joint_controls = False
+        self._updating_cartesian_controls = False
         self._last_dynamic_axis_angle = 0.0
         self._last_logic_joint_angle = 0.0
+        self.kinematics_segments = {"a": 3.4, "b": 5.4, "c": 7.3}
         self.undo_stack: list[PoseAction] = []
         self.redo_stack: list[PoseAction] = []
         self.display_mode = "sharp"
@@ -506,6 +508,12 @@ class HexapodModeler(QMainWindow):
         self.joint_max_angle_spin.setValue(360.0)
         self.joint_max_angle_spin.setEnabled(False)
         self.joint_max_angle_spin.valueChanged.connect(self._on_joint_metadata_changed)
+        self.theoretical_min_angle_spin = self._make_spinbox(-360, 360, 1.0)
+        self.theoretical_min_angle_spin.setEnabled(False)
+        self.theoretical_min_angle_spin.valueChanged.connect(self._on_joint_metadata_changed)
+        self.theoretical_max_angle_spin = self._make_spinbox(-360, 360, 1.0)
+        self.theoretical_max_angle_spin.setEnabled(False)
+        self.theoretical_max_angle_spin.valueChanged.connect(self._on_joint_metadata_changed)
         self.joint_direction_combo = QComboBox()
         self.joint_direction_combo.addItem("Positive increment", 1.0)
         self.joint_direction_combo.addItem("Negative increment", -1.0)
@@ -525,6 +533,20 @@ class HexapodModeler(QMainWindow):
         logic_joint_buttons_layout.setContentsMargins(0, 0, 0, 0)
         logic_joint_buttons_layout.addWidget(self.logic_joint_minus_button)
         logic_joint_buttons_layout.addWidget(self.logic_joint_plus_button)
+
+        self.segment_a_spin = self._make_spinbox(0.001, 10000, 0.1)
+        self.segment_a_spin.setValue(self.kinematics_segments["a"])
+        self.segment_a_spin.valueChanged.connect(self._on_kinematics_segments_changed)
+        self.segment_b_spin = self._make_spinbox(0.001, 10000, 0.1)
+        self.segment_b_spin.setValue(self.kinematics_segments["b"])
+        self.segment_b_spin.valueChanged.connect(self._on_kinematics_segments_changed)
+        self.segment_c_spin = self._make_spinbox(0.001, 10000, 0.1)
+        self.segment_c_spin.setValue(self.kinematics_segments["c"])
+        self.segment_c_spin.valueChanged.connect(self._on_kinematics_segments_changed)
+        self.leg_position_spins = [self._make_spinbox(-10000, 10000, 0.1) for _ in range(3)]
+        for spin in self.leg_position_spins:
+            spin.setEnabled(False)
+            spin.valueChanged.connect(self._on_leg_cartesian_changed)
 
         self.legs_tree = QTreeWidget()
         self.legs_tree.setHeaderLabels(["Legs"])
@@ -566,9 +588,18 @@ class HexapodModeler(QMainWindow):
         movement_logic_form.addRow(self.set_zero_position_button)
         movement_logic_form.addRow("Min angle deg", self.joint_min_angle_spin)
         movement_logic_form.addRow("Max angle deg", self.joint_max_angle_spin)
+        movement_logic_form.addRow("Theoretical at min", self.theoretical_min_angle_spin)
+        movement_logic_form.addRow("Theoretical at max", self.theoretical_max_angle_spin)
         movement_logic_form.addRow("Increment direction", self.joint_direction_combo)
         movement_logic_form.addRow("Joint step deg", self.logic_joint_step_spin)
         movement_logic_form.addRow("Move joint", logic_joint_buttons)
+        movement_logic_form.addRow(QLabel("Leg kinematics"))
+        movement_logic_form.addRow("Segment a", self.segment_a_spin)
+        movement_logic_form.addRow("Segment b", self.segment_b_spin)
+        movement_logic_form.addRow("Segment c", self.segment_c_spin)
+        movement_logic_form.addRow("End effector X", self.leg_position_spins[0])
+        movement_logic_form.addRow("End effector Y", self.leg_position_spins[1])
+        movement_logic_form.addRow("End effector Z", self.leg_position_spins[2])
         movement_logic_layout.addWidget(QLabel("Hexapod movement logic"))
         movement_logic_layout.addWidget(QLabel("Legs"))
         movement_logic_layout.addWidget(self.legs_tree)
@@ -1753,6 +1784,8 @@ class HexapodModeler(QMainWindow):
                 "joint_angle_degrees": 0.0,
                 "min_angle_degrees": -360.0,
                 "max_angle_degrees": 360.0,
+                "theoretical_angle_at_min": -360.0,
+                "theoretical_angle_at_max": 360.0,
                 "increment_sign": 1.0,
                 "zero_pose": {},
             }
@@ -1814,6 +1847,8 @@ class HexapodModeler(QMainWindow):
             )
             constraint.parameters.setdefault("min_angle_degrees", -360.0)
             constraint.parameters.setdefault("max_angle_degrees", 360.0)
+            constraint.parameters.setdefault("theoretical_angle_at_min", constraint.parameters.get("min_angle_degrees", -360.0))
+            constraint.parameters.setdefault("theoretical_angle_at_max", constraint.parameters.get("max_angle_degrees", 360.0))
             constraint.parameters.setdefault("increment_sign", 1.0)
             constraint.parameters.setdefault("zero_pose", {})
             constraint.parameters.setdefault("note", "When the core object rotates, the core and driven objects rotate around the current live axis.")
@@ -2033,6 +2068,8 @@ class HexapodModeler(QMainWindow):
                 self.joint_angle_spin.setValue(0.0)
                 self.joint_min_angle_spin.setValue(-360.0)
                 self.joint_max_angle_spin.setValue(360.0)
+                self.theoretical_min_angle_spin.setValue(-360.0)
+                self.theoretical_max_angle_spin.setValue(360.0)
                 self.joint_direction_combo.setCurrentIndex(0)
             else:
                 self.logic_selected_label.setText(f"Selected dynamic core: {constraint.parameters.get('core_object', self.selected_name)}")
@@ -2042,6 +2079,8 @@ class HexapodModeler(QMainWindow):
                 self.joint_angle_spin.setValue(float(constraint.parameters.get("joint_angle_degrees", 0.0)))
                 self.joint_min_angle_spin.setValue(float(constraint.parameters.get("min_angle_degrees", -360.0)))
                 self.joint_max_angle_spin.setValue(float(constraint.parameters.get("max_angle_degrees", 360.0)))
+                self.theoretical_min_angle_spin.setValue(float(constraint.parameters.get("theoretical_angle_at_min", constraint.parameters.get("min_angle_degrees", -360.0))))
+                self.theoretical_max_angle_spin.setValue(float(constraint.parameters.get("theoretical_angle_at_max", constraint.parameters.get("max_angle_degrees", 360.0))))
                 direction = float(constraint.parameters.get("increment_sign", 1.0))
                 direction_index = self.joint_direction_combo.findData(direction)
                 self.joint_direction_combo.setCurrentIndex(direction_index if direction_index >= 0 else 0)
@@ -2052,6 +2091,8 @@ class HexapodModeler(QMainWindow):
         self.set_zero_position_button.setEnabled(enabled)
         self.joint_min_angle_spin.setEnabled(enabled)
         self.joint_max_angle_spin.setEnabled(enabled)
+        self.theoretical_min_angle_spin.setEnabled(enabled)
+        self.theoretical_max_angle_spin.setEnabled(enabled)
         self.joint_direction_combo.setEnabled(enabled)
         motion_enabled = enabled and not self.objects[self.selected_name].fixed_absolute if self.selected_name else False
         self.logic_joint_step_spin.setEnabled(motion_enabled)
@@ -2066,6 +2107,7 @@ class HexapodModeler(QMainWindow):
                 min_angle, max_angle = max_angle, min_angle
             self.logic_joint_minus_button.setEnabled(motion_enabled and current_angle > min_angle + 1e-9)
             self.logic_joint_plus_button.setEnabled(motion_enabled and current_angle < max_angle - 1e-9)
+        self._refresh_leg_cartesian_controls()
 
     def _on_joint_metadata_changed(self) -> None:
         if self._updating_joint_controls:
@@ -2088,9 +2130,12 @@ class HexapodModeler(QMainWindow):
         constraint.parameters["joint_label"] = self.joint_label_combo.currentData()
         constraint.parameters["min_angle_degrees"] = min_angle
         constraint.parameters["max_angle_degrees"] = max_angle
+        constraint.parameters["theoretical_angle_at_min"] = float(self.theoretical_min_angle_spin.value())
+        constraint.parameters["theoretical_angle_at_max"] = float(self.theoretical_max_angle_spin.value())
         constraint.parameters["increment_sign"] = float(self.joint_direction_combo.currentData())
         self._rebuild_constraints_tree()
         self._rebuild_legs_tree()
+        self._refresh_leg_cartesian_controls()
 
     def _rebuild_legs_tree(self) -> None:
         if not hasattr(self, "legs_tree"):
@@ -2127,6 +2172,218 @@ class HexapodModeler(QMainWindow):
         if core_name:
             self._select_object_by_name(core_name)
 
+    def _on_kinematics_segments_changed(self) -> None:
+        if not hasattr(self, "segment_a_spin"):
+            return
+        self.kinematics_segments = {
+            "a": float(self.segment_a_spin.value()),
+            "b": float(self.segment_b_spin.value()),
+            "c": float(self.segment_c_spin.value()),
+        }
+        self._refresh_leg_cartesian_controls()
+
+    def _leg_key_for_joint_label(self, joint_label: str) -> Optional[str]:
+        for leg_key, _leg_label in LEG_LABELS:
+            if joint_label.startswith(f"{leg_key}_"):
+                return leg_key
+        return None
+
+    def _joint_kind_for_label(self, joint_label: str) -> Optional[str]:
+        if joint_label.endswith("_coxa_joint"):
+            return "coxa"
+        if joint_label.endswith("_femur_joint"):
+            return "femur"
+        if joint_label.endswith("_tibia_joint"):
+            return "tibia"
+        return None
+
+    def _selected_leg_key(self) -> Optional[str]:
+        constraint = self._dynamic_rotation_constraint_for(self.selected_name)
+        if constraint is None:
+            return None
+        return self._leg_key_for_joint_label(str(constraint.parameters.get("joint_label", "")))
+
+    def _leg_joint_constraints(self, leg_key: str) -> dict[str, ConstraintRecord]:
+        joints = {}
+        for constraint in self.constraints:
+            if constraint.type != "dynamic_rotation":
+                continue
+            label = str(constraint.parameters.get("joint_label", ""))
+            if not label.startswith(f"{leg_key}_"):
+                continue
+            joint_kind = self._joint_kind_for_label(label)
+            core_name = constraint.parameters.get("core_object")
+            if joint_kind and core_name in self.objects:
+                joints[joint_kind] = constraint
+        return joints
+
+    def _map_linear(self, value: float, source_min: float, source_max: float, target_min: float, target_max: float) -> Optional[float]:
+        if abs(source_max - source_min) <= 1e-9:
+            return None
+        ratio = (value - source_min) / (source_max - source_min)
+        return target_min + ratio * (target_max - target_min)
+
+    def _visual_angle_to_theoretical(self, constraint: ConstraintRecord, visual_angle: float) -> Optional[float]:
+        return self._map_linear(
+            visual_angle,
+            float(constraint.parameters.get("min_angle_degrees", -360.0)),
+            float(constraint.parameters.get("max_angle_degrees", 360.0)),
+            float(constraint.parameters.get("theoretical_angle_at_min", constraint.parameters.get("min_angle_degrees", -360.0))),
+            float(constraint.parameters.get("theoretical_angle_at_max", constraint.parameters.get("max_angle_degrees", 360.0))),
+        )
+
+    def _theoretical_angle_to_visual(self, constraint: ConstraintRecord, theoretical_angle: float) -> Optional[float]:
+        return self._map_linear(
+            theoretical_angle,
+            float(constraint.parameters.get("theoretical_angle_at_min", constraint.parameters.get("min_angle_degrees", -360.0))),
+            float(constraint.parameters.get("theoretical_angle_at_max", constraint.parameters.get("max_angle_degrees", 360.0))),
+            float(constraint.parameters.get("min_angle_degrees", -360.0)),
+            float(constraint.parameters.get("max_angle_degrees", 360.0)),
+        )
+
+    def _leg_inverse_kinematics_degrees(self, x: float, y: float, z: float) -> Optional[dict[str, float]]:
+        a = self.kinematics_segments["a"]
+        b = self.kinematics_segments["b"]
+        c = self.kinematics_segments["c"]
+        if a <= 0.0 or b <= 0.0 or c <= 0.0:
+            return None
+        radial = math.hypot(x, y)
+        lambda_1 = (radial - a) / c
+        lambda_2 = z / c
+        lambda_length = math.hypot(lambda_1, lambda_2)
+        if lambda_length <= 1e-9:
+            return None
+        g = (-c / (2.0 * b)) * (1.0 - lambda_1 * lambda_1 - lambda_2 * lambda_2 - (b / c) * (b / c))
+        omega_arg = g / lambda_length
+        if omega_arg < -1.0 - 1e-9 or omega_arg > 1.0 + 1e-9:
+            return None
+        omega = math.acos(float(np.clip(omega_arg, -1.0, 1.0)))
+        lambda_angle = math.atan2(z, radial - a)
+        theta_0 = math.atan2(y, x)
+        theta_1 = lambda_angle + omega
+        theta_2_arg = (b / c) - lambda_1 * math.cos(theta_1) - lambda_2 * math.sin(theta_1)
+        if theta_2_arg < -1.0 - 1e-9 or theta_2_arg > 1.0 + 1e-9:
+            return None
+        theta_2 = math.acos(float(np.clip(theta_2_arg, -1.0, 1.0)))
+        return {
+            "coxa": math.degrees(theta_0),
+            "femur": math.degrees(theta_1),
+            "tibia": math.degrees(theta_2),
+        }
+
+    def _leg_forward_kinematics_degrees(self, theoretical_angles: dict[str, float]) -> tuple[float, float, float]:
+        a = self.kinematics_segments["a"]
+        b = self.kinematics_segments["b"]
+        c = self.kinematics_segments["c"]
+        theta_0 = math.radians(theoretical_angles["coxa"])
+        theta_1 = math.radians(theoretical_angles["femur"])
+        theta_2 = math.radians(theoretical_angles["tibia"])
+        radial_from_coxa = b * math.cos(theta_1) - c * math.cos(theta_1 + theta_2)
+        z = b * math.sin(theta_1) - c * math.sin(theta_1 + theta_2)
+        radial = a + radial_from_coxa
+        return radial * math.cos(theta_0), radial * math.sin(theta_0), z
+
+    def _current_leg_cartesian(self, leg_key: str) -> Optional[tuple[float, float, float]]:
+        joints = self._leg_joint_constraints(leg_key)
+        if set(joints) != {"coxa", "femur", "tibia"}:
+            return None
+        theoretical_angles = {}
+        for joint_kind, constraint in joints.items():
+            visual_angle = float(constraint.parameters.get("joint_angle_degrees", 0.0))
+            theoretical_angle = self._visual_angle_to_theoretical(constraint, visual_angle)
+            if theoretical_angle is None:
+                return None
+            theoretical_angles[joint_kind] = theoretical_angle
+        return self._leg_forward_kinematics_degrees(theoretical_angles)
+
+    def _refresh_leg_cartesian_controls(self) -> None:
+        if not hasattr(self, "leg_position_spins"):
+            return
+        leg_key = self._selected_leg_key()
+        position = self._current_leg_cartesian(leg_key) if leg_key else None
+        enabled = self.workspace_mode == "movement_logic" and position is not None
+        self._updating_cartesian_controls = True
+        try:
+            if position is not None:
+                for spin, value in zip(self.leg_position_spins, position):
+                    spin.setValue(float(value))
+            else:
+                for spin in self.leg_position_spins:
+                    spin.setValue(0.0)
+        finally:
+            self._updating_cartesian_controls = False
+        for spin in self.leg_position_spins:
+            spin.setEnabled(enabled)
+
+    def _leg_visual_angles_for_cartesian(self, leg_key: str, x: float, y: float, z: float) -> Optional[dict[str, float]]:
+        joints = self._leg_joint_constraints(leg_key)
+        if set(joints) != {"coxa", "femur", "tibia"}:
+            return None
+        theoretical_angles = self._leg_inverse_kinematics_degrees(x, y, z)
+        if theoretical_angles is None:
+            return None
+        visual_angles = {}
+        for joint_kind, theoretical_angle in theoretical_angles.items():
+            constraint = joints[joint_kind]
+            visual_angle = self._theoretical_angle_to_visual(constraint, theoretical_angle)
+            if visual_angle is None:
+                return None
+            min_angle = float(constraint.parameters.get("min_angle_degrees", -360.0))
+            max_angle = float(constraint.parameters.get("max_angle_degrees", 360.0))
+            if min_angle > max_angle:
+                min_angle, max_angle = max_angle, min_angle
+            if visual_angle < min_angle - 1e-6 or visual_angle > max_angle + 1e-6:
+                return None
+            visual_angles[joint_kind] = float(np.clip(visual_angle, min_angle, max_angle))
+        return visual_angles
+
+    def _apply_leg_visual_angles(self, leg_key: str, visual_angles: dict[str, float]) -> bool:
+        joints = self._leg_joint_constraints(leg_key)
+        if set(joints) != {"coxa", "femur", "tibia"}:
+            return False
+        for joint_kind in ("coxa", "femur", "tibia"):
+            constraint = joints[joint_kind]
+            core_name = constraint.parameters.get("core_object")
+            if core_name not in self.objects or self.objects[core_name].fixed_absolute:
+                return False
+            axis_feature = constraint.parameters.get("axis_feature")
+            if not axis_feature or self._world_axis_from_feature_data(axis_feature) is None:
+                return False
+        changed = False
+        for joint_kind in ("coxa", "femur", "tibia"):
+            constraint = joints[joint_kind]
+            core_name = constraint.parameters.get("core_object")
+            current_angle = float(constraint.parameters.get("joint_angle_degrees", 0.0))
+            target_angle = float(visual_angles[joint_kind])
+            delta = target_angle - current_angle
+            if abs(delta) <= 1e-9:
+                continue
+            increment_sign = float(constraint.parameters.get("increment_sign", 1.0))
+            if not self._rotate_core_around_dynamic_axis_by(core_name, delta * increment_sign):
+                return False
+            constraint.parameters["joint_angle_degrees"] = target_angle
+            changed = True
+        if changed:
+            self._load_selected_into_joint_controls()
+            self._rebuild_constraints_tree()
+            self._rebuild_legs_tree()
+            self._refresh_leg_cartesian_controls()
+        return changed
+
+    def _on_leg_cartesian_changed(self) -> None:
+        if self._updating_cartesian_controls or self.workspace_mode != "movement_logic":
+            return
+        leg_key = self._selected_leg_key()
+        if not leg_key:
+            return
+        x, y, z = [float(spin.value()) for spin in self.leg_position_spins]
+        visual_angles = self._leg_visual_angles_for_cartesian(leg_key, x, y, z)
+        if visual_angles is None:
+            self.coincidence_status.setText("Kinematics: target is unreachable or outside joint limits.")
+            self._refresh_leg_cartesian_controls()
+            return
+        if self._apply_leg_visual_angles(leg_key, visual_angles):
+            self.coincidence_status.setText(f"Kinematics: moved {leg_key} foot to x={x:.3f}, y={y:.3f}, z={z:.3f}.")
     def set_selected_joint_zero_position(self) -> None:
         constraint = self._dynamic_rotation_constraint_for(self.selected_name)
         if constraint is None:
@@ -2137,6 +2394,7 @@ class HexapodModeler(QMainWindow):
         self._load_selected_into_joint_controls()
         self._rebuild_constraints_tree()
         self._rebuild_legs_tree()
+        self._refresh_leg_cartesian_controls()
 
     def increment_selected_joint(self, direction: float) -> None:
         if self.workspace_mode != "movement_logic" or not self.selected_name:
@@ -2164,6 +2422,7 @@ class HexapodModeler(QMainWindow):
             self._load_selected_into_joint_controls()
             self._rebuild_constraints_tree()
             self._rebuild_legs_tree()
+            self._refresh_leg_cartesian_controls()
 
     def _on_fixed_absolute_changed(self) -> None:
         if self._updating_controls or not self.selected_name:
@@ -2691,6 +2950,7 @@ class HexapodModeler(QMainWindow):
             return
         data = {
             "format_version": 2,
+            "kinematics_segments": self.kinematics_segments,
             "objects": [asdict(obj) for obj in self.objects.values()],
             "constraints": [asdict(constraint) for constraint in self.constraints],
         }
@@ -2703,6 +2963,16 @@ class HexapodModeler(QMainWindow):
         data = json.loads(Path(file_path).read_text(encoding="utf-8"))
         object_data = data if isinstance(data, list) else data.get("objects", [])
         constraint_data = [] if isinstance(data, list) else data.get("constraints", [])
+        segment_data = {} if isinstance(data, list) else data.get("kinematics_segments", {})
+        self.kinematics_segments = {
+            "a": float(segment_data.get("a", 3.4)),
+            "b": float(segment_data.get("b", 5.4)),
+            "c": float(segment_data.get("c", 7.3)),
+        }
+        if hasattr(self, "segment_a_spin"):
+            self.segment_a_spin.setValue(self.kinematics_segments["a"])
+            self.segment_b_spin.setValue(self.kinematics_segments["b"])
+            self.segment_c_spin.setValue(self.kinematics_segments["c"])
 
         self.clear_scene()
         name_map: dict[str, str] = {}
@@ -2740,6 +3010,7 @@ class HexapodModeler(QMainWindow):
         self._rebuild_legs_tree()
         self._refresh_alignment_targets()
         self._update_dynamic_axis_controls()
+        self._refresh_leg_cartesian_controls()
         self.reset_camera()
 
     def _remap_constraint_parameters(self, parameters: dict, name_map: dict[str, str]) -> dict:
@@ -2807,6 +3078,7 @@ class HexapodModeler(QMainWindow):
         self.finish_constraint_button.setEnabled(False)
         self.cancel_constraint_button.setEnabled(False)
         self.selected_name = None
+        self._refresh_leg_cartesian_controls()
         self.coincidence_picks.clear()
         self.last_coincidence = None
         self.reverse_coincidence_button.setEnabled(False)

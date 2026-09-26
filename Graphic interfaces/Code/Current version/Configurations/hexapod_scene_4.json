@@ -1,0 +1,4305 @@
+{
+  "format_version": 2,
+  "kinematics_segments": {
+    "a": 3.4,
+    "b": 5.4,
+    "c": 7.3
+  },
+  "objects": [
+    {
+      "name": "Main socle",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Body\\Main socle.stl",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Link led-head",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Link led-head.stl",
+      "position": [
+        20.2719437032938,
+        -0.7166326045989937,
+        -24.36694970726967
+      ],
+      "rotation": [
+        7.0167092985348736e-15,
+        -1.4124500153760508e-30,
+        7.016709298534876e-15
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Link led-head_2",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Link led-head.stl",
+      "position": [
+        -34.437419320190884,
+        -17.298543721724243,
+        -24.36694970726967
+      ],
+      "rotation": [
+        4.3400901127884885e-16,
+        1.192430148531083e-15,
+        -125.0000014686344
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Link led-head_3",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Link led-head.stl",
+      "position": [
+        26.140820493701842,
+        32.56465811684181,
+        -24.36694970726967
+      ],
+      "rotation": [
+        -4.3400891988882004e-16,
+        -1.1924305699644043e-15,
+        54.999993338516475
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Link led-head_4",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Link led-head.stl",
+      "position": [
+        -29.715695828199387,
+        14.283367544412615,
+        -24.36694970726967
+      ],
+      "rotation": [
+        -7.0167092985348736e-15,
+        1.4124500153760508e-30,
+        -180.0
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Link led-head_5",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Link led-head.stl",
+      "position": [
+        -23.29728976383627,
+        41.16830521101748,
+        -24.36694970726967
+      ],
+      "rotation": [
+        -4.340089377972159e-16,
+        1.1924304873821852e-15,
+        125.00000564391571
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Link led-head_6",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Link led-head.stl",
+      "position": [
+        12.706383023784872,
+        -25.902189315017974,
+        -24.36694970726967
+      ],
+      "rotation": [
+        4.3400903821015897e-16,
+        -1.1924300243407264e-15,
+        -55.0000000616239
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "PCA9685 v18",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Body\\PCA9685 v18.stl",
+      "position": [
+        9.278,
+        41.952,
+        7.4
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        -90.0
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "PCA9685 v18_2",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Body\\PCA9685 v18.stl",
+      "position": [
+        -18.722,
+        -21.4,
+        7.4
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        90.0
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "DC-DC Holder",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Body\\DC-DC Holder.stl",
+      "position": [
+        -24.72187757492065,
+        -10.206176698207864,
+        42.96657946519554
+      ],
+      "rotation": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "BMS case",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Body\\BMS case.stl",
+      "position": [
+        -4.721877574920649,
+        -9.51662993431092,
+        41.0
+      ],
+      "rotation": [
+        0.0,
+        -0.0,
+        -180.0
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "BMS case cover",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Body\\BMS case cover.stl",
+      "position": [
+        -4.72187757492065,
+        1.256469964981072,
+        46.0
+      ],
+      "rotation": [
+        90.0,
+        7.016709298534876e-15,
+        180.0
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Final cover",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Body\\Final cover.stl",
+      "position": [
+        -4.721877574920651,
+        7.783861398696892,
+        56.00000002980232
+      ],
+      "rotation": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Arduino Holder",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Body\\Arduino Holder.stl",
+      "position": [
+        -4.721877574920651,
+        10.48337006568908,
+        49.00000002980232
+      ],
+      "rotation": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "DC-DC Holder_2",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Body\\DC-DC Holder.stl",
+      "position": [
+        15.27812242507935,
+        -3.827082395553596,
+        42.96657946519554
+      ],
+      "rotation": [
+        0.0,
+        -0.0,
+        180.0
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Shell",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Body\\Shell.stl",
+      "position": [
+        -4.197476591382705,
+        27.509832847686038,
+        -11.071693390607834
+      ],
+      "rotation": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Battery cover",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Body\\Battery cover.stl",
+      "position": [
+        -4.721879959106445,
+        44.48337173461914,
+        16.0
+      ],
+      "rotation": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Body articulation - Hexapod",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Body articulation - Hexapod.stl",
+      "position": [
+        34.278125897049904,
+        6.783367723226554,
+        -31.800001859664917
+      ],
+      "rotation": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Body articulation - Hexapod_2",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Body articulation - Hexapod.stl",
+      "position": [
+        -43.72187802195549,
+        6.783368021249772,
+        -31.800001859664917
+      ],
+      "rotation": [
+        0.0,
+        -0.0,
+        -180.0
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Body articulation - Hexapod_3",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Body articulation - Hexapod.stl",
+      "position": [
+        -37.47454714053581,
+        48.33967313052156,
+        -31.80000153183937
+      ],
+      "rotation": [
+        2.2906379293711513e-15,
+        1.1924304873821848e-15,
+        125.00000564391571
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Body articulation - Hexapod_4",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Body articulation - Hexapod.stl",
+      "position": [
+        -36.327395193415775,
+        -33.073559910644676,
+        -31.80000153183937
+      ],
+      "rotation": [
+        -2.290637074667279e-15,
+        1.1924301485310825e-15,
+        -125.0000014686344
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Body articulation - Hexapod_5",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Body articulation - Hexapod.stl",
+      "position": [
+        26.88363968635629,
+        -33.07355864629973,
+        -31.80000153183937
+      ],
+      "rotation": [
+        6.207397815754251e-16,
+        -1.1924300243407264e-15,
+        -55.0000000616239
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Body articulation - Hexapod_6",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Body articulation - Hexapod.stl",
+      "position": [
+        28.030798455794002,
+        48.33967367293364,
+        -31.80000153183937
+      ],
+      "rotation": [
+        -6.207399766905248e-16,
+        -1.1924305699644045e-15,
+        54.999993338516475
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        31.925572967872153,
+        -40.274185628906515,
+        -30.80000153183937
+      ],
+      "rotation": [
+        -1.1924300243407264e-15,
+        3.7597174179256567e-16,
+        34.9999999383761
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_2",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        43.068468333946335,
+        6.783367723226547,
+        -30.800001859664917
+      ],
+      "rotation": [
+        0.0,
+        -0.0,
+        90.00000000000001
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_3",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        33.07273258223399,
+        55.54030006391812,
+        -30.80000153183937
+      ],
+      "rotation": [
+        -1.1924305699644045e-15,
+        -1.2939261702404505e-15,
+        144.9999933385165
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_4",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        -52.51222045885192,
+        6.783368021249772,
+        -30.8
+      ],
+      "rotation": [
+        0.0,
+        -0.0,
+        -90.0
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_5",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        -42.516481139093344,
+        55.54029961105032,
+        -30.80000153183937
+      ],
+      "rotation": [
+        1.1924304873821848e-15,
+        -1.293926029149367e-15,
+        -144.99999435608427
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_6",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        -41.36932866724631,
+        -40.27418675859128,
+        -30.80000153183937
+      ],
+      "rotation": [
+        1.1924301485310825e-15,
+        3.7597179845640584e-16,
+        -35.00000146863439
+      ],
+      "fixed_absolute": true,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        -37.96194085781955,
+        -35.35647739208028,
+        -5.600000000021008
+      ],
+      "rotation": [
+        -7.90757057685512e-09,
+        9.600825693981305e-09,
+        -36.000000000000014
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_2",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        37.278115992166015,
+        6.783370451924856,
+        -5.600001096725275
+      ],
+      "rotation": [
+        -7.907570796664668e-09,
+        9.600825470709513e-09,
+        89.00000000000065
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_3",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        28.60436550711325,
+        -35.53100502720499,
+        -5.600000768900046
+      ],
+      "rotation": [
+        -4.414643556744007e-08,
+        4.9640458513071606e-08,
+        29.657186879755344
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_4",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        29.653762558450115,
+        50.695278384172134,
+        -5.599999999977035
+      ],
+      "rotation": [
+        7.874008335676823e-09,
+        -9.628370447204611e-09,
+        145.20000000000016
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_5",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        -46.72186797998233,
+        6.783365419915403,
+        -5.599999237060583
+      ],
+      "rotation": [
+        2.917690539026227e-22,
+        -9.330685480134634e-23,
+        -90.0000000000003
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_6",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        -39.19527300293418,
+        50.797119358753854,
+        -5.600000768900031
+      ],
+      "rotation": [
+        4.103810150519645e-15,
+        -1.293923382003213e-15,
+        -144.99999435608552
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Trochanter - Hexapod",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Trochanter - Hexapod.stl",
+      "position": [
+        51.672074078808066,
+        0.5816395366114422,
+        -17.70000198239323
+      ],
+      "rotation": [
+        90.0000000096012,
+        7.90756377995676e-09,
+        179.00000000000065
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_7",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        71.47452124642732,
+        17.738652277053774,
+        -13.390344514898255
+      ],
+      "rotation": [
+        -89.99999999039963,
+        7.90756377995676e-09,
+        179.00000000000065
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_7",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        71.04624596497638,
+        -7.457711580903288,
+        -19.60050519363872
+      ],
+      "rotation": [
+        -89.9999999881335,
+        -35.99999984961657,
+        178.9999999930269
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Femur - Hexapod",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Femur - Hexapod.stl",
+      "position": [
+        98.77736639154452,
+        6.760479901732766,
+        9.714248582605018
+      ],
+      "rotation": [
+        -1.066657355274588e-06,
+        -54.000000370333325,
+        -0.9999986943511774
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_8",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        102.70408780060635,
+        -8.010301253379039,
+        23.979413566025865
+      ],
+      "rotation": [
+        89.99999998816287,
+        35.79999999209256,
+        -1.0000000069247064
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_8",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        103.24460546366197,
+        17.184274387361853,
+        18.18996424961517
+      ],
+      "rotation": [
+        90.40000003641235,
+        -0.9999999667310834,
+        -1.0000000079223683
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Tibia - Hexapod",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Tibia - Hexapod.stl",
+      "position": [
+        103.10898802788438,
+        18.186622956242054,
+        26.9789464769493
+      ],
+      "rotation": [
+        89.99999999991584,
+        89.0000000000001,
+        -0.999999999916695
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Tibia Shell - Hexapod - V3",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Tibia Shell - Hexapod - V3.stl",
+      "position": [
+        114.97654586103921,
+        20.479854771120692,
+        -48.880323220407945
+      ],
+      "rotation": [
+        1.0000000079076508,
+        -9.601522140409247e-09,
+        -91.00000000000126
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Trochanter - Hexapod_2",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Trochanter - Hexapod.stl",
+      "position": [
+        30.61049233618685,
+        -51.07483149638991,
+        -17.701457786984243
+      ],
+      "rotation": [
+        89.98658227487134,
+        0.007035540669114136,
+        119.67863882525022
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Trochanter - Hexapod_3",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Trochanter - Hexapod.stl",
+      "position": [
+        -51.38431260840021,
+        -43.764682456846266,
+        -17.700000378471625
+      ],
+      "rotation": [
+        90.00000000960084,
+        7.907559341392476e-09,
+        53.99999853136569
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Trochanter - Hexapod_4",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Trochanter - Hexapod.stl",
+      "position": [
+        -61.22186851494428,
+        12.732942903712406,
+        -17.6999996185303
+      ],
+      "rotation": [
+        90.00000000000007,
+        3.5083537271050785e-15,
+        2.4176524262939028e-15
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Trochanter - Hexapod_5",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Trochanter - Hexapod.stl",
+      "position": [
+        -42.638525329315904,
+        66.08736176483718,
+        -17.700001969393906
+      ],
+      "rotation": [
+        90.00000000000051,
+        -3.7572803706386974e-15,
+        -54.99999435608462
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Trochanter - Hexapod_6",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Trochanter - Hexapod.stl",
+      "position": [
+        42.78899065820567,
+        59.49608055988386,
+        -17.750714546261445
+      ],
+      "rotation": [
+        90.00000043831128,
+        -5.619293066425425e-07,
+        -123.97858711395364
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_9",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        -68.1584271979311,
+        72.02323647849238,
+        -13.390344501657783
+      ],
+      "rotation": [
+        -90.00000000000057,
+        -3.7572803706386974e-15,
+        -54.99999435608462
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_10",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        -80.72186851494439,
+        -4.767057096287619,
+        -13.390342150794172
+      ],
+      "rotation": [
+        -90.00000000000007,
+        3.5083536619383863e-15,
+        2.4176524262939028e-15
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_11",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        -48.684641583158445,
+        -69.8294343834248,
+        -13.390342910977404
+      ],
+      "rotation": [
+        -89.99999999039919,
+        7.90756279574628e-09,
+        53.99999853136569
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_12",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        55.4664863946477,
+        -59.33871896905129,
+        -13.385302508652588
+      ],
+      "rotation": [
+        -90.01341772922947,
+        -0.04533005979270301,
+        119.67865108841112
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_13",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        39.171617053701844,
+        85.4493873155262,
+        -13.441057364735391
+      ],
+      "rotation": [
+        -89.99999968230713,
+        -5.619293066425425e-07,
+        -123.97858711395364
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_9",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        33.580200659130114,
+        -71.82700906064427,
+        -19.600865332900558
+      ],
+      "rotation": [
+        -90.01685912122004,
+        -37.26217727118993,
+        119.68884804970808
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_10",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        -69.11756444237096,
+        -55.080137945126616,
+        -19.625259475886693
+      ],
+      "rotation": [
+        -89.99999998813306,
+        -35.9999999920926,
+        53.999998524390335
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_11",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        -80.72186851494416,
+        20.43294366665183,
+        -19.599999556371035
+      ],
+      "rotation": [
+        -90.00000000000009,
+        -38.29084024940695,
+        6.291956162353305e-15
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_12",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        -47.51579653157176,
+        86.47736521821412,
+        -19.73226087775186
+      ],
+      "rotation": [
+        -90.00000000000091,
+        -36.03843536257619,
+        -54.999994356084855
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_13",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        60.113113923593,
+        71.43153874297704,
+        -19.677346798908072
+      ],
+      "rotation": [
+        -89.9999997786088,
+        -37.00000056192943,
+        -123.97858744424457
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Femur - Hexapod_2",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Femur - Hexapod.stl",
+      "position": [
+        48.569181373006025,
+        -68.44608644589701,
+        -5.42377603586323
+      ],
+      "rotation": [
+        179.9778122434838,
+        52.79018506637177,
+        119.660969558893
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Femur - Hexapod_3",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Femur - Hexapod.stl",
+      "position": [
+        -59.63855998707301,
+        -67.04254247730097,
+        -5.467094550924161
+      ],
+      "rotation": [
+        -179.99999999688086,
+        54.00000000000053,
+        53.99999852824618
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Femur - Hexapod_4",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Femur - Hexapod.stl",
+      "position": [
+        -109.35043359423906,
+        5.732942903712387,
+        8.592943482297619
+      ],
+      "rotation": [
+        7.651929604994248e-14,
+        -51.709159750594445,
+        179.9999999999998
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Femur - Hexapod_5",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Femur - Hexapod.stl",
+      "position": [
+        -61.9626115545033,
+        81.48088535103003,
+        -5.4699060184041715
+      ],
+      "rotation": [
+        179.99999999999906,
+        53.961564637425035,
+        -54.999994356084784
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Femur - Hexapod_6",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Femur - Hexapod.stl",
+      "position": [
+        63.56419276411939,
+        102.85456444509903,
+        9.15337117474882
+      ],
+      "rotation": [
+        -6.15879305392582e-07,
+        -52.99999925720356,
+        56.02141344484778
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_14",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        -114.1012066878334,
+        20.432943666651866,
+        22.67946803900319
+      ],
+      "rotation": [
+        90.00000000000011,
+        38.29084024940695,
+        179.99999999999974
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_15",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        -87.72841216844608,
+        -80.69577091159701,
+        23.95465896887783
+      ],
+      "rotation": [
+        89.99999998813314,
+        35.9999999920926,
+        -126.00000147561005
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_16",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        -65.73815218153571,
+        112.50158066178734,
+        23.933355328617463
+      ],
+      "rotation": [
+        90.00000000000102,
+        36.038435362576045,
+        125.00000564391607
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_17",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        78.23121688013633,
+        98.31439752863612,
+        23.343344005150666
+      ],
+      "rotation": [
+        89.99999941902173,
+        37.00000056192947,
+        56.02141255575597
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "servo axis_18",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\servo axis.stl",
+      "position": [
+        49.74043356384125,
+        -100.20381194936971,
+        23.406157394204307
+      ],
+      "rotation": [
+        90.01685912121931,
+        37.262177271190474,
+        -60.31115195029592
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_14",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        71.8548174664437,
+        -88.1649103077838,
+        17.222482458687022
+      ],
+      "rotation": [
+        90.00747632269058,
+        -4.526522624212875,
+        -60.322421774862434
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_15",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        -67.40436539626445,
+        -95.59492241615021,
+        18.16530117696367
+      ],
+      "rotation": [
+        89.99999999039838,
+        -1.0000000079076194,
+        -126.000001468467
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_16",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        -114.39669430579673,
+        -4.767520143356181,
+        16.89665301077593
+      ],
+      "rotation": [
+        90.00000000000014,
+        -2.965400553972362,
+        179.99999999999974
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_17",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        -86.4950561766685,
+        98.20003285637074,
+        17.727341656355957
+      ],
+      "rotation": [
+        89.99402874038199,
+        -1.758626539536132,
+        125.00000564391799
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Micro servo SG90_18",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Micro servo SG90.stl",
+      "position": [
+        57.334504158712114,
+        112.39804369739879,
+        17.55098618949632
+      ],
+      "rotation": [
+        90.00596006472323,
+        5.619293096771527e-07,
+        56.02141290543487
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Tibia - Hexapod_2",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Tibia - Hexapod.stl",
+      "position": [
+        72.36272578038316,
+        -87.0388881290559,
+        26.403544250619028
+      ],
+      "rotation": [
+        90.0944366821174,
+        85.47347121446484,
+        -60.22768961412675
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Tibia - Hexapod_3",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Tibia - Hexapod.stl",
+      "position": [
+        -66.50519826682682,
+        -96.0585771676876,
+        26.9543048019414
+      ],
+      "rotation": [
+        89.99999999991603,
+        89.0000000000001,
+        -126.00000146855095
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Tibia - Hexapod_4",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Tibia - Hexapod.stl",
+      "position": [
+        -113.94672911508421,
+        -5.771544609272539,
+        25.67547719617846
+      ],
+      "rotation": [
+        90.0192919425434,
+        87.05352695587423,
+        -179.999635080801
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Tibia - Hexapod_5",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Tibia - Hexapod.stl",
+      "position": [
+        -87.15163713303585,
+        97.39525980794818,
+        26.932557240558502
+      ],
+      "rotation": [
+        89.80551913769698,
+        88.24136332624116,
+        124.8054331340223
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Tibia - Hexapod_6",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Tibia - Hexapod.stl",
+      "position": [
+        56.53034450083587,
+        112.94001918256856,
+        26.343126089298227
+      ],
+      "rotation": [
+        -179.99459802905204,
+        89.99403993526148,
+        146.0268148763474
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Tibia Shell - Hexapod - V3_2",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Tibia Shell - Hexapod - V3.stl",
+      "position": [
+        82.68703950880703,
+        -100.11171971015071,
+        -48.58828141137906
+      ],
+      "rotation": [
+        4.526522663856841,
+        -0.0075751033313100555,
+        -150.32302147685058
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Tibia Shell - Hexapod - V3_3",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Tibia Shell - Hexapod - V3.stl",
+      "position": [
+        -71.43744386188578,
+        -107.10048433619973,
+        -48.90485206981823
+      ],
+      "rotation": [
+        1.0000000079076117,
+        -9.601045218774992e-09,
+        143.9999985313658
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Tibia Shell - Hexapod - V3_4",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Tibia Shell - Hexapod - V3.stl",
+      "position": [
+        -128.34283540280734,
+        -8.296664497896153,
+        -49.733358455359436
+      ],
+      "rotation": [
+        2.9464730543818547,
+        0.019875424204859986,
+        89.98207044748642
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Tibia Shell - Hexapod - V3_5",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Tibia Shell - Hexapod - V3.stl",
+      "position": [
+        -96.55884906855573,
+        106.4696236347097,
+        -48.762186650713495
+      ],
+      "rotation": [
+        1.7586265395361231,
+        8.591886303207541e-14,
+        35.000005643918506
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    },
+    {
+      "name": "Tibia Shell - Hexapod - V3_6",
+      "file_path": "C:\\Users\\essol\\Desktop\\Projets\\Scarlett\\Hexapod-Scarlett\\Graphic interfaces\\Scarlett 3D models\\Legs\\Tibia Shell - Hexapod - V3.stl",
+      "position": [
+        60.326405546770395,
+        123.04370385755568,
+        -49.71227777085312
+      ],
+      "rotation": [
+        -5.61929307888333e-07,
+        -1.5840781839393022e-07,
+        -33.97858709456582
+      ],
+      "fixed_absolute": false,
+      "rigid_group": ""
+    }
+  ],
+  "constraints": [
+    {
+      "id": 8,
+      "type": "absolute",
+      "name": "Absolute 1",
+      "objects": [
+        "Main socle",
+        "PCA9685 v18_2",
+        "Shell",
+        "Arduino Holder",
+        "DC-DC Holder",
+        "PCA9685 v18",
+        "DC-DC Holder_2",
+        "Final cover",
+        "Battery cover",
+        "BMS case",
+        "BMS case cover",
+        "Link led-head_6",
+        "Link led-head",
+        "Link led-head_3",
+        "Link led-head_4",
+        "Link led-head_5",
+        "Body articulation - Hexapod_3",
+        "Body articulation - Hexapod_2",
+        "Micro servo SG90_4",
+        "Micro servo SG90_5",
+        "Body articulation - Hexapod_6",
+        "Micro servo SG90_3",
+        "Body articulation - Hexapod",
+        "Micro servo SG90_2",
+        "Link led-head_2",
+        "Body articulation - Hexapod_4",
+        "Micro servo SG90_6",
+        "Body articulation - Hexapod_5",
+        "Micro servo SG90"
+      ],
+      "parameters": {}
+    },
+    {
+      "id": 9,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 1",
+      "objects": [
+        "servo axis_3",
+        "Trochanter - Hexapod_2",
+        "Femur - Hexapod_2",
+        "Micro servo SG90_12",
+        "servo axis_9",
+        "Tibia Shell - Hexapod - V3_2",
+        "servo axis_18",
+        "Micro servo SG90_14",
+        "Tibia - Hexapod_2",
+        "Body articulation - Hexapod_5"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "servo axis_3",
+        "axis_feature": {
+          "object": "Body articulation - Hexapod_5",
+          "kind": "axis",
+          "cell_id": 192,
+          "cell_ids": [
+            192,
+            193,
+            191,
+            194,
+            190,
+            195,
+            189,
+            196,
+            188,
+            197,
+            187,
+            198,
+            186,
+            199,
+            185,
+            200,
+            184,
+            201,
+            183,
+            202,
+            182,
+            203,
+            181,
+            204,
+            180,
+            205,
+            179,
+            150,
+            178,
+            151,
+            177,
+            152,
+            176,
+            153,
+            175,
+            154,
+            174,
+            155,
+            173,
+            156,
+            172,
+            157,
+            171,
+            158,
+            170,
+            159,
+            169,
+            160,
+            168,
+            161,
+            167,
+            162,
+            166,
+            163,
+            165,
+            164
+          ],
+          "local_point": [
+            2.999990399926901,
+            2.9588723335598795e-06,
+            -2.0
+          ],
+          "local_normal": [
+            9.669588327697548e-09,
+            7.823587055977299e-09,
+            1.0
+          ],
+          "local_axis_point": [
+            2.999990399926901,
+            2.9588723335598795e-06,
+            -2.0
+          ],
+          "local_axis_direction": [
+            9.669588327697548e-09,
+            7.823587055977299e-09,
+            1.0
+          ],
+          "local_axis_radius": 2.7843559153523083,
+          "local_axis_length": 11.702697338648044
+        },
+        "driven_objects": [
+          "Trochanter - Hexapod_2",
+          "Femur - Hexapod_2",
+          "Micro servo SG90_12",
+          "servo axis_9",
+          "Tibia Shell - Hexapod - V3_2",
+          "servo axis_18",
+          "Micro servo SG90_14",
+          "Tibia - Hexapod_2"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "front_left_coxa_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": 1.0,
+        "joint_angle_degrees": -6.342813058621232,
+        "zero_pose": {},
+        "min_angle_degrees": -45.0,
+        "max_angle_degrees": 45.0,
+        "theoretical_angle_at_min": -45.0,
+        "theoretical_angle_at_max": 45.0
+      }
+    },
+    {
+      "id": 10,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 2",
+      "objects": [
+        "servo axis_9",
+        "Femur - Hexapod_2",
+        "servo axis_18",
+        "Micro servo SG90_14",
+        "Tibia - Hexapod_2",
+        "Tibia Shell - Hexapod - V3_2",
+        "Trochanter - Hexapod_2"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "servo axis_9",
+        "axis_feature": {
+          "object": "Trochanter - Hexapod_2",
+          "kind": "axis",
+          "cell_id": 204,
+          "cell_ids": [
+            204,
+            203,
+            205,
+            202,
+            206,
+            201,
+            207,
+            200,
+            208,
+            199,
+            209,
+            198,
+            210,
+            197,
+            211,
+            196,
+            212,
+            195,
+            213,
+            194,
+            214,
+            193,
+            215,
+            192,
+            216,
+            191,
+            217,
+            190,
+            218,
+            189,
+            219,
+            188,
+            220,
+            187,
+            221,
+            186,
+            222,
+            185,
+            223,
+            184,
+            224,
+            183,
+            225,
+            182,
+            226,
+            181,
+            227,
+            180,
+            228,
+            179,
+            229,
+            178,
+            174,
+            177,
+            175,
+            176
+          ],
+          "local_point": [
+            -19.5,
+            -1.8999999378408705,
+            23.600000381469727
+          ],
+          "local_normal": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "local_axis_point": [
+            -19.5,
+            -1.8999999378408705,
+            23.600000381469727
+          ],
+          "local_axis_direction": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "local_axis_radius": 2.7843556472358846,
+          "local_axis_length": 16.768997610629402
+        },
+        "driven_objects": [
+          "Femur - Hexapod_2",
+          "servo axis_18",
+          "Micro servo SG90_14",
+          "Tibia - Hexapod_2",
+          "Tibia Shell - Hexapod - V3_2"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "front_left_femur_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": 1.0,
+        "joint_angle_degrees": 37.21684840536956,
+        "zero_pose": {},
+        "min_angle_degrees": 0.0,
+        "max_angle_degrees": 90.0,
+        "theoretical_angle_at_min": 90.0,
+        "theoretical_angle_at_max": 0.0
+      }
+    },
+    {
+      "id": 11,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 3",
+      "objects": [
+        "Micro servo SG90_14",
+        "Tibia Shell - Hexapod - V3_2",
+        "Tibia - Hexapod_2",
+        "servo axis_18"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "Micro servo SG90_14",
+        "axis_feature": {
+          "object": "servo axis_18",
+          "kind": "axis",
+          "cell_id": 239,
+          "cell_ids": [
+            239,
+            240,
+            238,
+            241,
+            237,
+            242,
+            236,
+            243,
+            225,
+            244,
+            226,
+            245,
+            227,
+            246,
+            228,
+            247,
+            229,
+            248,
+            230,
+            259,
+            231,
+            258,
+            232,
+            257,
+            233,
+            256,
+            234,
+            255,
+            235,
+            254,
+            272,
+            253,
+            271,
+            252,
+            270,
+            251,
+            269,
+            250,
+            268,
+            249,
+            267,
+            260,
+            266,
+            261,
+            265,
+            262,
+            264,
+            263
+          ],
+          "local_point": [
+            4.625929269271485e-18,
+            1.1102230246251565e-16,
+            5.5
+          ],
+          "local_normal": [
+            0.0,
+            -3.469446951953614e-18,
+            -1.0
+          ],
+          "local_axis_point": [
+            4.625929269271485e-18,
+            1.1102230246251565e-16,
+            5.5
+          ],
+          "local_axis_direction": [
+            0.0,
+            -3.469446951953614e-18,
+            -1.0
+          ],
+          "local_axis_radius": 2.2328977535481247,
+          "local_axis_length": 6.177875585649245
+        },
+        "driven_objects": [
+          "Tibia Shell - Hexapod - V3_2",
+          "Tibia - Hexapod_2"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "front_left_tibia_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": -1.0,
+        "joint_angle_degrees": 41.73633561313773,
+        "zero_pose": {
+          "Tibia - Hexapod_2": {
+            "position": [
+              71.2723456178071,
+              -72.93476738196631,
+              33.25793800455935
+            ],
+            "rotation": [
+              -90.02101459066171,
+              68.00703456699249,
+              126.0042089098736
+            ]
+          },
+          "Tibia Shell - Hexapod - V3_2": {
+            "position": [
+              62.26679790656103,
+              -56.303502448735955,
+              -41.19718561209512
+            ],
+            "rotation": [
+              -21.992964007994466,
+              -0.006108296294588441,
+              -143.97066020884918
+            ]
+          },
+          "Micro servo SG90_14": {
+            "position": [
+              68.43612484761965,
+              -70.7327768842384,
+              24.71833133795544
+            ],
+            "rotation": [
+              90.00848744442315,
+              21.992963876489387,
+              -53.97312724822982
+            ]
+          }
+        },
+        "min_angle_degrees": 0.0,
+        "max_angle_degrees": 90.0,
+        "theoretical_angle_at_min": 0.0,
+        "theoretical_angle_at_max": 90.0
+      }
+    },
+    {
+      "id": 12,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 4",
+      "objects": [
+        "servo axis_2",
+        "Trochanter - Hexapod",
+        "Micro servo SG90_7",
+        "servo axis_7",
+        "Femur - Hexapod",
+        "servo axis_8",
+        "Micro servo SG90_8",
+        "Tibia Shell - Hexapod - V3",
+        "Tibia - Hexapod",
+        "Body articulation - Hexapod"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "servo axis_2",
+        "axis_feature": {
+          "object": "Body articulation - Hexapod",
+          "kind": "axis",
+          "cell_id": 186,
+          "cell_ids": [
+            186,
+            185,
+            187,
+            184,
+            188,
+            183,
+            189,
+            182,
+            190,
+            181,
+            191,
+            180,
+            192,
+            179,
+            193,
+            178,
+            194,
+            177,
+            195,
+            176,
+            196,
+            175,
+            197,
+            174,
+            198,
+            173,
+            199,
+            172,
+            200,
+            171,
+            201,
+            170,
+            202,
+            169,
+            203,
+            168,
+            204,
+            167,
+            205,
+            166,
+            150,
+            165,
+            151,
+            164,
+            152,
+            163,
+            153,
+            162,
+            154,
+            161,
+            155,
+            160,
+            156,
+            159,
+            157,
+            158
+          ],
+          "local_point": [
+            2.999990399926901,
+            2.9588723333140443e-06,
+            -2.0
+          ],
+          "local_normal": [
+            9.669588327697555e-09,
+            7.823587055977299e-09,
+            1.0
+          ],
+          "local_axis_point": [
+            2.999990399926901,
+            2.9588723333140443e-06,
+            -2.0
+          ],
+          "local_axis_direction": [
+            9.669588327697555e-09,
+            7.823587055977299e-09,
+            1.0
+          ],
+          "local_axis_radius": 2.7843559153523083,
+          "local_axis_length": 11.702697338648044
+        },
+        "driven_objects": [
+          "Trochanter - Hexapod",
+          "Micro servo SG90_7",
+          "servo axis_7",
+          "Femur - Hexapod",
+          "servo axis_8",
+          "Micro servo SG90_8",
+          "Tibia Shell - Hexapod - V3",
+          "Tibia - Hexapod"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "middle_left_coxa_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": 1.0,
+        "joint_angle_degrees": 0.0,
+        "zero_pose": {
+          "Micro servo SG90_7": {
+            "position": [
+              71.47452124642732,
+              17.738652277053774,
+              -13.390344514898255
+            ],
+            "rotation": [
+              -89.99999999039963,
+              7.90756377995676e-09,
+              179.00000000000065
+            ]
+          },
+          "Tibia Shell - Hexapod - V3": {
+            "position": [
+              110.57751606735268,
+              20.556640122110693,
+              -46.9716994693032
+            ],
+            "rotation": [
+              7.907648027191219e-09,
+              -9.60134827069177e-09,
+              -91.0000000000009
+            ]
+          },
+          "servo axis_7": {
+            "position": [
+              71.03702847721925,
+              -7.45755068905607,
+              -19.600022058211575
+            ],
+            "rotation": [
+              -89.99999998867942,
+              -31.999999849616525,
+              178.99999999400274
+            ]
+          },
+          "Trochanter - Hexapod": {
+            "position": [
+              51.672074078808066,
+              0.5816395366114422,
+              -17.70000198239323
+            ],
+            "rotation": [
+              90.0000000096012,
+              7.90756377995676e-09,
+              179.00000000000065
+            ]
+          },
+          "servo axis_8": {
+            "position": [
+              99.57823494643283,
+              -7.955739288501097,
+              26.082414014484293
+            ],
+            "rotation": [
+              89.99999998870358,
+              31.7999999920925,
+              -1.0000000059530696
+            ]
+          },
+          "servo axis_2": {
+            "position": [
+              37.278115992166015,
+              6.783370451924856,
+              -5.600001096725275
+            ],
+            "rotation": [
+              -7.907570796664668e-09,
+              9.600825470709513e-09,
+              89.00000000000065
+            ]
+          },
+          "Tibia - Hexapod": {
+            "position": [
+              100.0354842418447,
+              18.24027116473708,
+              29.082403904148357
+            ],
+            "rotation": [
+              91.0000000000002,
+              90.0,
+              0.0
+            ]
+          },
+          "Micro servo SG90_8": {
+            "position": [
+              100.01771283666446,
+              17.240600008034825,
+              20.29208848941878
+            ],
+            "rotation": [
+              90.40000003627247,
+              3.3268971818923006e-08,
+              -1.0000000080886846
+            ]
+          },
+          "Femur - Hexapod": {
+            "position": [
+              96.65663982700443,
+              6.797497321921076,
+              11.560143515838485
+            ],
+            "rotation": [
+              -1.1688635265588632e-06,
+              -58.000000349570676,
+              -0.9999986324542477
+            ]
+          }
+        },
+        "min_angle_degrees": -45.0,
+        "max_angle_degrees": 45.0,
+        "theoretical_angle_at_min": -45.0,
+        "theoretical_angle_at_max": 45.0
+      }
+    },
+    {
+      "id": 13,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 5",
+      "objects": [
+        "servo axis_7",
+        "Femur - Hexapod",
+        "servo axis_8",
+        "Micro servo SG90_8",
+        "Tibia Shell - Hexapod - V3",
+        "Tibia - Hexapod",
+        "Trochanter - Hexapod"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "servo axis_7",
+        "axis_feature": {
+          "object": "Trochanter - Hexapod",
+          "kind": "axis",
+          "cell_id": 301,
+          "cell_ids": [
+            301,
+            304,
+            405,
+            305,
+            303,
+            404,
+            306,
+            434,
+            403,
+            307,
+            433,
+            402,
+            308,
+            401,
+            309,
+            400,
+            310,
+            399,
+            311,
+            398,
+            312,
+            397,
+            313,
+            396,
+            314,
+            395,
+            315,
+            394,
+            316,
+            393,
+            317,
+            392,
+            318,
+            391,
+            319,
+            390,
+            320,
+            389,
+            321,
+            388,
+            322,
+            387,
+            323,
+            386,
+            324,
+            385,
+            325,
+            384,
+            326,
+            383,
+            327,
+            382,
+            328,
+            381,
+            329,
+            380,
+            330,
+            379,
+            331,
+            378,
+            332,
+            377,
+            333,
+            376,
+            334,
+            375,
+            335,
+            374,
+            336,
+            373,
+            337,
+            372,
+            338,
+            371,
+            339,
+            370,
+            340,
+            369,
+            341,
+            368,
+            342,
+            302,
+            367,
+            366,
+            432,
+            431
+          ],
+          "local_point": [
+            -19.500000088713886,
+            -2.0322589083581932,
+            20.38372093023256
+          ],
+          "local_normal": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "local_axis_point": [
+            -19.500000088713886,
+            -2.0322589083581932,
+            20.38372093023256
+          ],
+          "local_axis_direction": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "local_axis_radius": 6.018283866759289,
+          "local_axis_length": 16.768997610629402
+        },
+        "driven_objects": [
+          "Femur - Hexapod",
+          "servo axis_8",
+          "Micro servo SG90_8",
+          "Tibia Shell - Hexapod - V3",
+          "Tibia - Hexapod"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "middle_left_femur_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": 1.0,
+        "joint_angle_degrees": 36.0,
+        "zero_pose": {
+          "Tibia Shell - Hexapod - V3": {
+            "position": [
+              119.07752808839825,
+              20.408271864554507,
+              -22.14040247867723
+            ],
+            "rotation": [
+              32.000000007907644,
+              -9.600508009062081e-09,
+              -91.0000000000008
+            ]
+          },
+          "servo axis_7": {
+            "position": [
+              70.9666125732735,
+              -7.456321574883801,
+              -19.61889286771851
+            ],
+            "rotation": [
+              -89.99999999039889,
+              1.503834642418748e-07,
+              179.00000000000205
+            ]
+          },
+          "servo axis_8": {
+            "position": [
+              70.96661246562904,
+              -7.4563215590285825,
+              34.248849094747726
+            ],
+            "rotation": [
+              89.99999999039979,
+              -0.20000000790747888,
+              -0.9999999999664569
+            ]
+          },
+          "Tibia - Hexapod": {
+            "position": [
+              69.83435202303812,
+              18.767433889813997,
+              36.7929828121151
+            ],
+            "rotation": [
+              89.99999999724787,
+              58.00000000000051,
+              -0.9999999972462617
+            ]
+          },
+          "Micro servo SG90_8": {
+            "position": [
+              74.47407756075387,
+              17.686465821794425,
+              29.338201909539364
+            ],
+            "rotation": [
+              90.40000003960695,
+              -31.999999966731057,
+              -1.0000000035386252
+            ]
+          },
+          "Femur - Hexapod": {
+            "position": [
+              76.2224014211921,
+              7.154178281509235,
+              20.248848172425163
+            ],
+            "rotation": [
+              -115.70640824739385,
+              -89.99999914622636,
+              114.70640824267214
+            ]
+          }
+        },
+        "min_angle_degrees": 0.0,
+        "max_angle_degrees": 90.0,
+        "theoretical_angle_at_min": 90.0,
+        "theoretical_angle_at_max": 0.0
+      }
+    },
+    {
+      "id": 14,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 6",
+      "objects": [
+        "Micro servo SG90_8",
+        "Tibia - Hexapod",
+        "Tibia Shell - Hexapod - V3",
+        "servo axis_8"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "Micro servo SG90_8",
+        "axis_feature": {
+          "object": "servo axis_8",
+          "kind": "axis",
+          "cell_id": 238,
+          "cell_ids": [
+            238,
+            237,
+            239,
+            236,
+            240,
+            225,
+            241,
+            226,
+            242,
+            227,
+            243,
+            228,
+            244,
+            229,
+            245,
+            230,
+            246,
+            231,
+            247,
+            232,
+            248,
+            233,
+            259,
+            234,
+            258,
+            235,
+            257,
+            272,
+            256,
+            271,
+            255,
+            270,
+            254,
+            269,
+            253,
+            268,
+            252,
+            267,
+            251,
+            266,
+            250,
+            265,
+            249,
+            264,
+            260,
+            263,
+            261,
+            262
+          ],
+          "local_point": [
+            -8.0953762212251e-18,
+            0.0,
+            5.5
+          ],
+          "local_normal": [
+            0.0,
+            -8.673617379884034e-19,
+            -1.0
+          ],
+          "local_axis_point": [
+            -8.0953762212251e-18,
+            0.0,
+            5.5
+          ],
+          "local_axis_direction": [
+            0.0,
+            -8.673617379884034e-19,
+            -1.0
+          ],
+          "local_axis_radius": 2.2328977535481243,
+          "local_axis_length": 6.177875585649245
+        },
+        "driven_objects": [
+          "Tibia - Hexapod",
+          "Tibia Shell - Hexapod - V3"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "middle_left_tibia_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": -1.0,
+        "joint_angle_degrees": 37.0,
+        "zero_pose": {
+          "Tibia Shell - Hexapod - V3": {
+            "position": [
+              81.96589358654879,
+              21.056057851583812,
+              -38.80526438903966
+            ],
+            "rotation": [
+              7.90764938753847e-09,
+              -9.6009693835678e-09,
+              -91.0000000000008
+            ]
+          },
+          "Tibia - Hexapod": {
+            "position": [
+              71.4238617610407,
+              18.739688894209472,
+              37.24883898441214
+            ],
+            "rotation": [
+              90.99999999999996,
+              90.0,
+              0.0
+            ]
+          },
+          "Micro servo SG90_8": {
+            "position": [
+              71.40609035586061,
+              17.740017737507323,
+              28.458523569682495
+            ],
+            "rotation": [
+              90.40000003627307,
+              3.326890943575745e-08,
+              -1.0000000080882265
+            ]
+          }
+        },
+        "min_angle_degrees": 0.0,
+        "max_angle_degrees": 90.0,
+        "theoretical_angle_at_min": 0.0,
+        "theoretical_angle_at_max": 90.0
+      }
+    },
+    {
+      "id": 15,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 7",
+      "objects": [
+        "servo axis_4",
+        "Trochanter - Hexapod_6",
+        "Femur - Hexapod_6",
+        "Tibia Shell - Hexapod - V3_6",
+        "servo axis_17",
+        "servo axis_13",
+        "Micro servo SG90_13",
+        "Micro servo SG90_18",
+        "Tibia - Hexapod_6",
+        "Body articulation - Hexapod_6"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "servo axis_4",
+        "axis_feature": {
+          "object": "Body articulation - Hexapod_6",
+          "kind": "axis",
+          "cell_id": 190,
+          "cell_ids": [
+            190,
+            189,
+            191,
+            188,
+            192,
+            187,
+            193,
+            186,
+            194,
+            185,
+            195,
+            184,
+            196,
+            183,
+            197,
+            182,
+            198,
+            181,
+            199,
+            180,
+            200,
+            179,
+            201,
+            178,
+            202,
+            177,
+            203,
+            176,
+            204,
+            175,
+            205,
+            174,
+            150,
+            173,
+            151,
+            172,
+            152,
+            171,
+            153,
+            170,
+            154,
+            169,
+            155,
+            168,
+            156,
+            167,
+            157,
+            166,
+            158,
+            165,
+            159,
+            164,
+            160,
+            163,
+            161,
+            162
+          ],
+          "local_point": [
+            2.9999903999269004,
+            2.9588723332743934e-06,
+            -2.0
+          ],
+          "local_normal": [
+            9.669588327697548e-09,
+            7.823587014343937e-09,
+            1.0
+          ],
+          "local_axis_point": [
+            2.9999903999269004,
+            2.9588723332743934e-06,
+            -2.0
+          ],
+          "local_axis_direction": [
+            9.669588327697548e-09,
+            7.823587014343937e-09,
+            1.0
+          ],
+          "local_axis_radius": 2.784355915352308,
+          "local_axis_length": 11.702697338648044
+        },
+        "driven_objects": [
+          "Trochanter - Hexapod_6",
+          "Femur - Hexapod_6",
+          "Tibia Shell - Hexapod - V3_6",
+          "servo axis_17",
+          "servo axis_13",
+          "Micro servo SG90_13",
+          "Micro servo SG90_18",
+          "Tibia - Hexapod_6"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "rear_left_coxa_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": 1.0,
+        "joint_angle_degrees": 0.0,
+        "zero_pose": {},
+        "min_angle_degrees": -45.0,
+        "max_angle_degrees": 45.0,
+        "theoretical_angle_at_min": -45.0,
+        "theoretical_angle_at_max": 45.0
+      }
+    },
+    {
+      "id": 16,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 8",
+      "objects": [
+        "servo axis_13",
+        "Femur - Hexapod_6",
+        "servo axis_17",
+        "Micro servo SG90_18",
+        "Tibia Shell - Hexapod - V3_6",
+        "Tibia - Hexapod_6",
+        "Trochanter - Hexapod_6"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "servo axis_13",
+        "axis_feature": {
+          "object": "Trochanter - Hexapod_6",
+          "kind": "axis",
+          "cell_id": 405,
+          "cell_ids": [
+            405,
+            404,
+            301,
+            403,
+            304,
+            402,
+            305,
+            303,
+            401,
+            306,
+            434,
+            400,
+            307,
+            433,
+            399,
+            308,
+            398,
+            309,
+            397,
+            310,
+            396,
+            311,
+            395,
+            312,
+            394,
+            313,
+            393,
+            314,
+            392,
+            315,
+            391,
+            316,
+            390,
+            317,
+            389,
+            318,
+            388,
+            319,
+            387,
+            320,
+            386,
+            321,
+            385,
+            322,
+            384,
+            323,
+            383,
+            324,
+            382,
+            325,
+            381,
+            326,
+            380,
+            327,
+            379,
+            328,
+            378,
+            329,
+            377,
+            330,
+            376,
+            331,
+            375,
+            332,
+            374,
+            333,
+            373,
+            334,
+            372,
+            335,
+            371,
+            336,
+            370,
+            337,
+            369,
+            338,
+            368,
+            339,
+            367,
+            340,
+            366,
+            341,
+            342,
+            302,
+            432,
+            431
+          ],
+          "local_point": [
+            -19.500000088713886,
+            -2.0322589083581932,
+            20.383720930232556
+          ],
+          "local_normal": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "local_axis_point": [
+            -19.500000088713886,
+            -2.0322589083581932,
+            20.383720930232556
+          ],
+          "local_axis_direction": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "local_axis_radius": 6.018283866759289,
+          "local_axis_length": 16.768997610629402
+        },
+        "driven_objects": [
+          "Femur - Hexapod_6",
+          "servo axis_17",
+          "Micro servo SG90_18",
+          "Tibia Shell - Hexapod - V3_6",
+          "Tibia - Hexapod_6"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "rear_left_femur_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": 1.0,
+        "joint_angle_degrees": 36.0,
+        "zero_pose": {
+          "Tibia Shell - Hexapod - V3_6": {
+            "position": [
+              61.74931830377676,
+              125.15496067434749,
+              -24.596585169391194
+            ],
+            "rotation": [
+              28.999999438070713,
+              -2.032098683735708e-07,
+              -33.978586965210454
+            ]
+          },
+          "Femur - Hexapod_6": {
+            "position": [
+              51.062849128500474,
+              84.30561096667098,
+              20.123671960606323
+            ],
+            "rotation": [
+              -2.423238610698927e-05,
+              -88.99999925720324,
+              56.021437208668864
+            ]
+          },
+          "servo axis_13": {
+            "position": [
+              60.069919399717755,
+              71.36744857481803,
+              -19.65073472720848
+            ],
+            "rotation": [
+              -89.9999998890557,
+              -1.0000005619294168,
+              -123.97858712160424
+            ]
+          },
+          "Micro servo SG90_18": {
+            "position": [
+              41.26807541281951,
+              88.55937095210761,
+              29.142690368004537
+            ],
+            "rotation": [
+              90.00595999078996,
+              -28.99999943807074,
+              56.02141314743104
+            ]
+          },
+          "Tibia - Hexapod_6": {
+            "position": [
+              38.08166900181924,
+              85.56667160353808,
+              36.83246923300294
+            ],
+            "rotation": [
+              90.01075210807896,
+              61.00000000270346,
+              56.033706613894104
+            ]
+          },
+          "servo axis_17": {
+            "position": [
+              60.595337732820504,
+              72.14704206840888,
+              34.20880257169526
+            ],
+            "rotation": [
+              89.9999995294684,
+              1.0000005619294319,
+              56.02141287839614
+            ]
+          }
+        },
+        "min_angle_degrees": 0.0,
+        "max_angle_degrees": 90.0,
+        "theoretical_angle_at_min": 90.0,
+        "theoretical_angle_at_max": 0.0
+      }
+    },
+    {
+      "id": 17,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 9",
+      "objects": [
+        "Micro servo SG90_18",
+        "Tibia Shell - Hexapod - V3_6",
+        "Tibia - Hexapod_6",
+        "servo axis_17"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "Micro servo SG90_18",
+        "axis_feature": {
+          "object": "servo axis_17",
+          "kind": "axis",
+          "cell_id": 242,
+          "cell_ids": [
+            242,
+            241,
+            243,
+            240,
+            244,
+            239,
+            245,
+            238,
+            246,
+            237,
+            247,
+            236,
+            248,
+            225,
+            259,
+            226,
+            258,
+            227,
+            257,
+            228,
+            256,
+            229,
+            255,
+            230,
+            254,
+            231,
+            253,
+            232,
+            252,
+            233,
+            251,
+            234,
+            250,
+            235,
+            249,
+            272,
+            260,
+            271,
+            261,
+            270,
+            262,
+            269,
+            263,
+            268,
+            264,
+            267,
+            265,
+            266
+          ],
+          "local_point": [
+            0.0,
+            0.0,
+            5.5
+          ],
+          "local_normal": [
+            0.0,
+            -4.336808689942018e-19,
+            -1.0
+          ],
+          "local_axis_point": [
+            0.0,
+            0.0,
+            5.5
+          ],
+          "local_axis_direction": [
+            0.0,
+            -4.336808689942018e-19,
+            -1.0
+          ],
+          "local_axis_radius": 2.2328977535481243,
+          "local_axis_length": 6.177875585649245
+        },
+        "driven_objects": [
+          "Tibia Shell - Hexapod - V3_6",
+          "Tibia - Hexapod_6"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "rear_left_tibia_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": -1.0,
+        "joint_angle_degrees": 37.0,
+        "zero_pose": {
+          "Tibia Shell - Hexapod - V3_6": {
+            "position": [
+              41.97705879601536,
+              95.81773596566669,
+              -39.01894267097297
+            ],
+            "rotation": [
+              -1.0000005619292596,
+              -1.6492383996746655e-07,
+              -33.97858711868804
+            ]
+          },
+          "Micro servo SG90_18": {
+            "position": [
+              39.64212720742841,
+              86.14685923518957,
+              28.4173270249524
+            ],
+            "rotation": [
+              90.00596005818207,
+              1.0000005619292285,
+              56.02141287843359
+            ]
+          },
+          "Tibia - Hexapod_6": {
+            "position": [
+              38.92372479638744,
+              86.81607762026071,
+              37.208127837646416
+            ],
+            "rotation": [
+              -90.34144726858261,
+              88.999981678896,
+              -124.3200864028224
+            ]
+          }
+        },
+        "min_angle_degrees": 0.0,
+        "max_angle_degrees": 90.0,
+        "theoretical_angle_at_min": 0.0,
+        "theoretical_angle_at_max": 90.0
+      }
+    },
+    {
+      "id": 18,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 10",
+      "objects": [
+        "servo axis_6",
+        "Trochanter - Hexapod_5",
+        "Femur - Hexapod_5",
+        "Tibia Shell - Hexapod - V3_5",
+        "servo axis_12",
+        "Micro servo SG90_9",
+        "servo axis_16",
+        "Micro servo SG90_17",
+        "Tibia - Hexapod_5",
+        "Body articulation - Hexapod_3"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "servo axis_6",
+        "axis_feature": {
+          "object": "Body articulation - Hexapod_3",
+          "kind": "axis",
+          "cell_id": 194,
+          "cell_ids": [
+            194,
+            193,
+            195,
+            192,
+            196,
+            191,
+            197,
+            190,
+            198,
+            189,
+            199,
+            188,
+            200,
+            187,
+            201,
+            186,
+            202,
+            185,
+            203,
+            184,
+            204,
+            183,
+            205,
+            182,
+            150,
+            181,
+            151,
+            180,
+            152,
+            179,
+            153,
+            178,
+            154,
+            177,
+            155,
+            176,
+            156,
+            175,
+            157,
+            174,
+            158,
+            173,
+            159,
+            172,
+            160,
+            171,
+            161,
+            170,
+            162,
+            169,
+            163,
+            168,
+            164,
+            167,
+            165,
+            166
+          ],
+          "local_point": [
+            2.999990399926901,
+            2.9588723335916e-06,
+            -2.0
+          ],
+          "local_normal": [
+            9.669588327697543e-09,
+            7.823587042099513e-09,
+            1.0
+          ],
+          "local_axis_point": [
+            2.999990399926901,
+            2.9588723335916e-06,
+            -2.0
+          ],
+          "local_axis_direction": [
+            9.669588327697543e-09,
+            7.823587042099513e-09,
+            1.0
+          ],
+          "local_axis_radius": 2.7843559153523083,
+          "local_axis_length": 11.702697338648044
+        },
+        "driven_objects": [
+          "Trochanter - Hexapod_5",
+          "Femur - Hexapod_5",
+          "Tibia Shell - Hexapod - V3_5",
+          "servo axis_12",
+          "Micro servo SG90_9",
+          "servo axis_16",
+          "Micro servo SG90_17",
+          "Tibia - Hexapod_5"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "rear_right_coxa_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": 1.0,
+        "joint_angle_degrees": 0.0,
+        "zero_pose": {},
+        "min_angle_degrees": -45.0,
+        "max_angle_degrees": 45.0,
+        "theoretical_angle_at_min": -45.0,
+        "theoretical_angle_at_max": 45.0
+      }
+    },
+    {
+      "id": 19,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 11",
+      "objects": [
+        "servo axis_12",
+        "Femur - Hexapod_5",
+        "Tibia Shell - Hexapod - V3_5",
+        "Micro servo SG90_17",
+        "servo axis_16",
+        "Tibia - Hexapod_5",
+        "Trochanter - Hexapod_5"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "servo axis_12",
+        "axis_feature": {
+          "object": "Trochanter - Hexapod_5",
+          "kind": "axis",
+          "cell_id": 401,
+          "cell_ids": [
+            401,
+            400,
+            402,
+            399,
+            403,
+            398,
+            404,
+            397,
+            405,
+            396,
+            301,
+            395,
+            304,
+            394,
+            305,
+            303,
+            393,
+            306,
+            434,
+            392,
+            307,
+            433,
+            391,
+            308,
+            390,
+            309,
+            389,
+            310,
+            388,
+            311,
+            387,
+            312,
+            386,
+            313,
+            385,
+            314,
+            384,
+            315,
+            383,
+            316,
+            382,
+            317,
+            381,
+            318,
+            380,
+            319,
+            379,
+            320,
+            378,
+            321,
+            377,
+            322,
+            376,
+            323,
+            375,
+            324,
+            374,
+            325,
+            373,
+            326,
+            372,
+            327,
+            371,
+            328,
+            370,
+            329,
+            369,
+            330,
+            368,
+            331,
+            367,
+            332,
+            366,
+            333,
+            342,
+            334,
+            341,
+            335,
+            340,
+            302,
+            336,
+            339,
+            432,
+            337,
+            338,
+            431
+          ],
+          "local_point": [
+            -19.50000008871389,
+            -2.0322589083581932,
+            20.383720930232556
+          ],
+          "local_normal": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "local_axis_point": [
+            -19.50000008871389,
+            -2.0322589083581932,
+            20.383720930232556
+          ],
+          "local_axis_direction": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "local_axis_radius": 6.018283866759288,
+          "local_axis_length": 16.768997610629402
+        },
+        "driven_objects": [
+          "Femur - Hexapod_5",
+          "Tibia Shell - Hexapod - V3_5",
+          "Micro servo SG90_17",
+          "servo axis_16",
+          "Tibia - Hexapod_5"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "rear_right_femur_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": 1.0,
+        "joint_angle_degrees": 36.038435362575754,
+        "zero_pose": {
+          "Tibia - Hexapod_5": {
+            "position": [
+              -67.94632806616589,
+              69.96724169561159,
+              36.664129191300944
+            ],
+            "rotation": [
+              89.99207587107101,
+              52.999999587084275,
+              124.99008355950438
+            ]
+          },
+          "servo axis_12": {
+            "position": [
+              -47.51579653157158,
+              86.47736521821477,
+              -19.732260877752186
+            ],
+            "rotation": [
+              -90.00000000000051,
+              -2.7146458416560275e-13,
+              -54.99999435608447
+            ]
+          },
+          "Tibia Shell - Hexapod - V3_5": {
+            "position": [
+              -101.05736495712078,
+              112.8941687873338,
+              -17.755280346962753
+            ],
+            "rotation": [
+              37.00000000000004,
+              -1.5600580901095517e-12,
+              35.000005643917845
+            ]
+          },
+          "Femur - Hexapod_5": {
+            "position": [
+              -56.68944879182505,
+              73.95003004115512,
+              -5.73226019655621
+            ],
+            "rotation": [
+              -125.00000564391664,
+              90.0,
+              0.0
+            ]
+          },
+          "servo axis_16": {
+            "position": [
+              -47.515796531572704,
+              86.47736521821484,
+              34.267739803444236
+            ],
+            "rotation": [
+              90.00000000000064,
+              1.1921872010520224e-13,
+              125.00000564391577
+            ]
+          },
+          "Micro servo SG90_17": {
+            "position": [
+              -70.30665382227663,
+              75.08060314867593,
+              29.30905277166169
+            ],
+            "rotation": [
+              89.99402874037939,
+              -37.00000000000011,
+              125.00000564391834
+            ]
+          }
+        },
+        "min_angle_degrees": 0.0,
+        "max_angle_degrees": 90.0,
+        "theoretical_angle_at_min": 90.0,
+        "theoretical_angle_at_max": 0.0
+      }
+    },
+    {
+      "id": 20,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 12",
+      "objects": [
+        "Micro servo SG90_17",
+        "Tibia - Hexapod_5",
+        "Tibia Shell - Hexapod - V3_5",
+        "servo axis_16"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "Micro servo SG90_17",
+        "axis_feature": {
+          "object": "servo axis_16",
+          "kind": "axis",
+          "cell_id": 238,
+          "cell_ids": [
+            238,
+            237,
+            239,
+            236,
+            240,
+            225,
+            241,
+            226,
+            242,
+            227,
+            243,
+            228,
+            244,
+            229,
+            245,
+            230,
+            246,
+            231,
+            247,
+            232,
+            248,
+            233,
+            259,
+            234,
+            258,
+            235,
+            257,
+            272,
+            256,
+            271,
+            255,
+            270,
+            254,
+            269,
+            253,
+            268,
+            252,
+            267,
+            251,
+            266,
+            250,
+            265,
+            249,
+            264,
+            260,
+            263,
+            261,
+            262
+          ],
+          "local_point": [
+            -8.0953762212251e-18,
+            0.0,
+            5.5
+          ],
+          "local_normal": [
+            0.0,
+            -8.673617379884034e-19,
+            -1.0
+          ],
+          "local_axis_point": [
+            -8.0953762212251e-18,
+            0.0,
+            5.5
+          ],
+          "local_axis_direction": [
+            0.0,
+            -8.673617379884034e-19,
+            -1.0
+          ],
+          "local_axis_radius": 2.2328977535481243,
+          "local_axis_length": 6.177875585649245
+        },
+        "driven_objects": [
+          "Tibia - Hexapod_5",
+          "Tibia Shell - Hexapod - V3_5"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "rear_right_tibia_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": -1.0,
+        "joint_angle_degrees": 37.79706190211179,
+        "zero_pose": {
+          "Micro servo SG90_17": {
+            "position": [
+              -68.16340774503448,
+              72.01973117722733,
+              28.05880205945893
+            ],
+            "rotation": [
+              89.99402874038111,
+              -1.4664682616308117e-13,
+              125.00000564391819
+            ]
+          },
+          "Tibia Shell - Hexapod - V3_5": {
+            "position": [
+              -77.05342963773737,
+              78.61300359415543,
+              -38.78444519179311
+            ],
+            "rotation": [
+              6.893385899909082e-14,
+              1.1363134052433296e-13,
+              35.00000564391871
+            ]
+          },
+          "Tibia - Hexapod_5": {
+            "position": [
+              -68.98209979346151,
+              71.44647671326214,
+              37.268355512952944
+            ],
+            "rotation": [
+              -3.42747245776594e-08,
+              89.99402874050229,
+              35.00000560963969
+            ]
+          }
+        },
+        "min_angle_degrees": 0.0,
+        "max_angle_degrees": 90.0,
+        "theoretical_angle_at_min": 0.0,
+        "theoretical_angle_at_max": 90.0
+      }
+    },
+    {
+      "id": 21,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 13",
+      "objects": [
+        "servo axis_5",
+        "Trochanter - Hexapod_4",
+        "Femur - Hexapod_4",
+        "servo axis_11",
+        "Tibia Shell - Hexapod - V3_4",
+        "Micro servo SG90_10",
+        "Micro servo SG90_16",
+        "servo axis_14",
+        "Tibia - Hexapod_4",
+        "Body articulation - Hexapod_2"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "servo axis_5",
+        "axis_feature": {
+          "object": "Body articulation - Hexapod_2",
+          "kind": "axis",
+          "cell_id": 188,
+          "cell_ids": [
+            188,
+            187,
+            189,
+            186,
+            190,
+            185,
+            191,
+            184,
+            192,
+            183,
+            193,
+            182,
+            194,
+            181,
+            195,
+            180,
+            196,
+            179,
+            197,
+            178,
+            198,
+            177,
+            199,
+            176,
+            200,
+            175,
+            201,
+            174,
+            202,
+            173,
+            203,
+            172,
+            204,
+            171,
+            205,
+            170,
+            150,
+            169,
+            151,
+            168,
+            152,
+            167,
+            153,
+            166,
+            154,
+            165,
+            155,
+            164,
+            156,
+            163,
+            157,
+            162,
+            158,
+            161,
+            159,
+            160
+          ],
+          "local_point": [
+            2.9999903999269004,
+            2.9588723331792314e-06,
+            -2.0
+          ],
+          "local_normal": [
+            9.66958832769755e-09,
+            7.823587042099511e-09,
+            1.0
+          ],
+          "local_axis_point": [
+            2.9999903999269004,
+            2.9588723331792314e-06,
+            -2.0
+          ],
+          "local_axis_direction": [
+            9.66958832769755e-09,
+            7.823587042099511e-09,
+            1.0
+          ],
+          "local_axis_radius": 2.7843559153523083,
+          "local_axis_length": 11.702697338648044
+        },
+        "driven_objects": [
+          "Trochanter - Hexapod_4",
+          "Femur - Hexapod_4",
+          "servo axis_11",
+          "Tibia Shell - Hexapod - V3_4",
+          "Micro servo SG90_10",
+          "Micro servo SG90_16",
+          "servo axis_14",
+          "Tibia - Hexapod_4"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "middle_right_coxa_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": 1.0,
+        "joint_angle_degrees": 0.0,
+        "zero_pose": {},
+        "min_angle_degrees": -45.0,
+        "max_angle_degrees": 45.0,
+        "theoretical_angle_at_min": -45.0,
+        "theoretical_angle_at_max": 45.0
+      }
+    },
+    {
+      "id": 22,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 14",
+      "objects": [
+        "servo axis_11",
+        "Femur - Hexapod_4",
+        "servo axis_14",
+        "Micro servo SG90_16",
+        "Tibia - Hexapod_4",
+        "Tibia Shell - Hexapod - V3_4",
+        "Trochanter - Hexapod_4"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "servo axis_11",
+        "axis_feature": {
+          "object": "Trochanter - Hexapod_4",
+          "kind": "axis",
+          "cell_id": 202,
+          "cell_ids": [
+            202,
+            201,
+            203,
+            200,
+            204,
+            199,
+            205,
+            198,
+            206,
+            197,
+            207,
+            196,
+            208,
+            195,
+            209,
+            194,
+            210,
+            193,
+            211,
+            192,
+            212,
+            191,
+            213,
+            190,
+            214,
+            189,
+            215,
+            188,
+            216,
+            187,
+            217,
+            186,
+            218,
+            185,
+            219,
+            184,
+            220,
+            183,
+            221,
+            182,
+            222,
+            181,
+            223,
+            180,
+            224,
+            179,
+            225,
+            178,
+            226,
+            177,
+            227,
+            176,
+            228,
+            175,
+            229,
+            174
+          ],
+          "local_point": [
+            -19.5,
+            -1.8999999378408705,
+            23.600000381469727
+          ],
+          "local_normal": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "local_axis_point": [
+            -19.5,
+            -1.8999999378408705,
+            23.600000381469727
+          ],
+          "local_axis_direction": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "local_axis_radius": 2.7843556472358846,
+          "local_axis_length": 16.768997610629402
+        },
+        "driven_objects": [
+          "Femur - Hexapod_4",
+          "servo axis_14",
+          "Micro servo SG90_16",
+          "Tibia - Hexapod_4",
+          "Tibia Shell - Hexapod - V3_4"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "middle_right_femur_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": 1.0,
+        "joint_angle_degrees": 36.29084024940675,
+        "zero_pose": {
+          "Femur - Hexapod_4": {
+            "position": [
+              -87.11018683529406,
+              5.732942903712372,
+              20.068957635858126
+            ],
+            "rotation": [
+              1.7321285665448025e-12,
+              -88.00000000000078,
+              179.99999999999835
+            ]
+          },
+          "Tibia - Hexapod_4": {
+            "position": [
+              -81.33462948539811,
+              -5.7715446092725795,
+              36.95414564849325
+            ],
+            "rotation": [
+              90.01896776701875,
+              65.0189275099092,
+              -179.99995558346683
+            ]
+          },
+          "servo axis_14": {
+            "position": [
+              -82.60182567780707,
+              20.432943666651873,
+              34.234927378419044
+            ],
+            "rotation": [
+              90.00000000000009,
+              2.000000000000072,
+              179.99999999999972
+            ]
+          },
+          "Tibia Shell - Hexapod - V3_4": {
+            "position": [
+              -122.97007122735104,
+              -8.296664497896288,
+              -27.54570211505167
+            ],
+            "rotation": [
+              24.981073599070314,
+              0.025150239028749178,
+              89.99083665945356
+            ]
+          },
+          "servo axis_11": {
+            "position": [
+              -80.72186851494413,
+              20.43294366665183,
+              -19.599999556371163
+            ],
+            "rotation": [
+              -90.00000000000009,
+              -2.000000000000072,
+              4.8070999249143346e-14
+            ]
+          },
+          "Micro servo SG90_16": {
+            "position": [
+              -85.04524818788725,
+              -4.767520143356208,
+              28.98536082295059
+            ],
+            "rotation": [
+              90.00000000000007,
+              -25.00000000000002,
+              179.99999999999974
+            ]
+          }
+        },
+        "min_angle_degrees": 0.0,
+        "max_angle_degrees": 90.0,
+        "theoretical_angle_at_min": 90.0,
+        "theoretical_angle_at_max": 0.0
+      }
+    },
+    {
+      "id": 23,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 15",
+      "objects": [
+        "Micro servo SG90_16",
+        "Tibia - Hexapod_4",
+        "Tibia Shell - Hexapod - V3_4",
+        "servo axis_14"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "Micro servo SG90_16",
+        "axis_feature": {
+          "object": "servo axis_14",
+          "kind": "axis",
+          "cell_id": 242,
+          "cell_ids": [
+            242,
+            241,
+            243,
+            240,
+            244,
+            239,
+            245,
+            238,
+            246,
+            237,
+            247,
+            236,
+            248,
+            225,
+            259,
+            226,
+            258,
+            227,
+            257,
+            228,
+            256,
+            229,
+            255,
+            230,
+            254,
+            231,
+            253,
+            232,
+            252,
+            233,
+            251,
+            234,
+            250,
+            235,
+            249,
+            272,
+            260,
+            271,
+            261,
+            270,
+            262,
+            269,
+            263,
+            268,
+            264,
+            267,
+            265,
+            266
+          ],
+          "local_point": [
+            0.0,
+            0.0,
+            5.5
+          ],
+          "local_normal": [
+            0.0,
+            -4.336808689942018e-19,
+            -1.0
+          ],
+          "local_axis_point": [
+            0.0,
+            0.0,
+            5.5
+          ],
+          "local_axis_direction": [
+            0.0,
+            -4.336808689942018e-19,
+            -1.0
+          ],
+          "local_axis_radius": 2.2328977535481243,
+          "local_axis_length": 6.177875585649245
+        },
+        "driven_objects": [
+          "Tibia - Hexapod_4",
+          "Tibia Shell - Hexapod - V3_4"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "middle_right_tibia_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": -1.0,
+        "joint_angle_degrees": 40.256240803379086,
+        "zero_pose": {
+          "Micro servo SG90_16": {
+            "position": [
+              -82.49670077139427,
+              -4.767520143356205,
+              28.44552228487876
+            ],
+            "rotation": [
+              90.00000000000007,
+              0.9999999999999608,
+              179.99999999999974
+            ]
+          },
+          "Tibia - Hexapod_4": {
+            "position": [
+              -82.65490411599923,
+              -5.771544609272533,
+              37.23444681822285
+            ],
+            "rotation": [
+              -89.98212716929282,
+              88.98107248991232,
+              -0.0010548418594649364
+            ]
+          },
+          "Tibia Shell - Hexapod - V3_4": {
+            "position": [
+              -91.80171903687629,
+              -8.296664497896455,
+              -38.989408682343786
+            ],
+            "rotation": [
+              -1.0189275141347125,
+              0.018587941002673376,
+              89.98073890475392
+            ]
+          }
+        },
+        "min_angle_degrees": 0.0,
+        "max_angle_degrees": 90.0,
+        "theoretical_angle_at_min": 0.0,
+        "theoretical_angle_at_max": 90.0
+      }
+    },
+    {
+      "id": 24,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 16",
+      "objects": [
+        "servo axis",
+        "Trochanter - Hexapod_3",
+        "Tibia Shell - Hexapod - V3_3",
+        "servo axis_10",
+        "Femur - Hexapod_3",
+        "Micro servo SG90_11",
+        "servo axis_15",
+        "Micro servo SG90_15",
+        "Tibia - Hexapod_3",
+        "Body articulation - Hexapod_4"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "servo axis",
+        "axis_feature": {
+          "object": "Body articulation - Hexapod_4",
+          "kind": "axis",
+          "cell_id": 180,
+          "cell_ids": [
+            180,
+            179,
+            181,
+            178,
+            182,
+            177,
+            183,
+            176,
+            184,
+            175,
+            185,
+            174,
+            186,
+            173,
+            187,
+            172,
+            188,
+            171,
+            189,
+            170,
+            190,
+            169,
+            191,
+            168,
+            192,
+            167,
+            193,
+            166,
+            194,
+            165,
+            195,
+            164,
+            196,
+            163,
+            197,
+            162,
+            198,
+            161,
+            199,
+            160,
+            200,
+            159,
+            201,
+            158,
+            202,
+            157,
+            203,
+            156,
+            204,
+            155,
+            205,
+            154,
+            150,
+            153,
+            151,
+            152
+          ],
+          "local_point": [
+            2.999990399926901,
+            2.9588723333814508e-06,
+            -2.0
+          ],
+          "local_normal": [
+            9.669588327697552e-09,
+            7.823587042099513e-09,
+            1.0
+          ],
+          "local_axis_point": [
+            2.999990399926901,
+            2.9588723333814508e-06,
+            -2.0
+          ],
+          "local_axis_direction": [
+            9.669588327697552e-09,
+            7.823587042099513e-09,
+            1.0
+          ],
+          "local_axis_radius": 2.7843559153523083,
+          "local_axis_length": 11.702697338648044
+        },
+        "driven_objects": [
+          "Trochanter - Hexapod_3",
+          "Tibia Shell - Hexapod - V3_3",
+          "servo axis_10",
+          "Femur - Hexapod_3",
+          "Micro servo SG90_11",
+          "servo axis_15",
+          "Micro servo SG90_15",
+          "Tibia - Hexapod_3"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "front_right_coxa_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": 1.0,
+        "joint_angle_degrees": 0.0,
+        "zero_pose": {},
+        "min_angle_degrees": -45.0,
+        "max_angle_degrees": 45.0,
+        "theoretical_angle_at_min": -45.0,
+        "theoretical_angle_at_max": 45.0
+      }
+    },
+    {
+      "id": 25,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 17",
+      "objects": [
+        "servo axis_10",
+        "Femur - Hexapod_3",
+        "servo axis_15",
+        "Micro servo SG90_15",
+        "Tibia - Hexapod_3",
+        "Tibia Shell - Hexapod - V3_3",
+        "Trochanter - Hexapod_3"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "servo axis_10",
+        "axis_feature": {
+          "object": "Trochanter - Hexapod_3",
+          "kind": "axis",
+          "cell_id": 308,
+          "cell_ids": [
+            308,
+            307,
+            309,
+            306,
+            310,
+            305,
+            311,
+            304,
+            312,
+            301,
+            303,
+            313,
+            405,
+            434,
+            314,
+            404,
+            433,
+            315,
+            403,
+            316,
+            402,
+            317,
+            401,
+            318,
+            400,
+            319,
+            399,
+            320,
+            398,
+            321,
+            397,
+            322,
+            396,
+            323,
+            395,
+            324,
+            394,
+            325,
+            393,
+            326,
+            392,
+            327,
+            391,
+            328,
+            390,
+            329,
+            389,
+            330,
+            388,
+            331,
+            387,
+            332,
+            386,
+            333,
+            385,
+            334,
+            384,
+            335,
+            383,
+            336,
+            382,
+            337,
+            381,
+            338,
+            380,
+            339,
+            379,
+            340,
+            378,
+            341,
+            377,
+            342,
+            302,
+            376,
+            366,
+            432,
+            375,
+            367,
+            431,
+            374,
+            368,
+            373,
+            369,
+            372,
+            370,
+            371
+          ],
+          "local_point": [
+            -19.50000008871389,
+            -2.0322589083581932,
+            20.383720930232556
+          ],
+          "local_normal": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "local_axis_point": [
+            -19.50000008871389,
+            -2.0322589083581932,
+            20.383720930232556
+          ],
+          "local_axis_direction": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "local_axis_radius": 6.018283866759288,
+          "local_axis_length": 16.768997610629402
+        },
+        "driven_objects": [
+          "Femur - Hexapod_3",
+          "servo axis_15",
+          "Micro servo SG90_15",
+          "Tibia - Hexapod_3",
+          "Tibia Shell - Hexapod - V3_3"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "front_right_femur_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": 1.0,
+        "joint_angle_degrees": 36.0,
+        "zero_pose": {
+          "servo axis_15": {
+            "position": [
+              -69.07187012078249,
+              -55.01724512577784,
+              34.267741398346885
+            ],
+            "rotation": [
+              89.99999999039969,
+              -7.907438441298994e-09,
+              -126.00000146863458
+            ]
+          },
+          "Tibia - Hexapod_3": {
+            "position": [
+              -46.74508671992424,
+              -68.86111835680954,
+              36.57000472693822
+            ],
+            "rotation": [
+              89.99999997345945,
+              49.99999998435601,
+              -126.00000149522488
+            ]
+          },
+          "Femur - Hexapod_3": {
+            "position": [
+              -54.240393551235314,
+              -59.61260419174142,
+              -5.732258604806526
+            ],
+            "rotation": [
+              126.0000014686341,
+              90.0,
+              0.0
+            ]
+          },
+          "Tibia Shell - Hexapod - V3_3": {
+            "position": [
+              -78.18813069608083,
+              -116.39200715438902,
+              -14.93739316353797
+            ],
+            "rotation": [
+              40.0000000079076,
+              -9.600934565862035e-09,
+              143.9999985313658
+            ]
+          },
+          "Micro servo SG90_15": {
+            "position": [
+              -50.87525693171395,
+              -72.84455759368099,
+              29.836211750988287
+            ],
+            "rotation": [
+              89.99999998746748,
+              -40.00000000790765,
+              -126.00000146057849
+            ]
+          },
+          "servo axis_10": {
+            "position": [
+              -69.07187008031013,
+              -55.01724505471584,
+              -19.600000312331904
+            ],
+            "rotation": [
+              -89.99999999039944,
+              7.907438242544602e-09,
+              53.999998531365726
+            ]
+          }
+        },
+        "min_angle_degrees": 0.0,
+        "max_angle_degrees": 90.0,
+        "theoretical_angle_at_min": 90.0,
+        "theoretical_angle_at_max": 0.0
+      }
+    },
+    {
+      "id": 26,
+      "type": "dynamic_rotation",
+      "name": "DynamicRotation 18",
+      "objects": [
+        "Micro servo SG90_15",
+        "Tibia - Hexapod_3",
+        "Tibia Shell - Hexapod - V3_3",
+        "servo axis_15"
+      ],
+      "parameters": {
+        "status": "active",
+        "core_object": "Micro servo SG90_15",
+        "axis_feature": {
+          "object": "servo axis_15",
+          "kind": "axis",
+          "cell_id": 226,
+          "cell_ids": [
+            226,
+            225,
+            227,
+            236,
+            228,
+            237,
+            229,
+            238,
+            230,
+            239,
+            231,
+            240,
+            232,
+            241,
+            233,
+            242,
+            234,
+            243,
+            235,
+            244,
+            272,
+            245,
+            271,
+            246,
+            270,
+            247,
+            269,
+            248,
+            268,
+            259,
+            267,
+            258,
+            266,
+            257,
+            265,
+            256,
+            264,
+            255,
+            263,
+            254,
+            262,
+            253,
+            261,
+            252,
+            260,
+            251,
+            249,
+            250
+          ],
+          "local_point": [
+            -1.1564823173178714e-17,
+            -9.25185853854297e-18,
+            5.5
+          ],
+          "local_normal": [
+            0.0,
+            -1.7347234759768075e-18,
+            -1.0
+          ],
+          "local_axis_point": [
+            -1.1564823173178714e-17,
+            -9.25185853854297e-18,
+            5.5
+          ],
+          "local_axis_direction": [
+            0.0,
+            -1.7347234759768075e-18,
+            -1.0
+          ],
+          "local_axis_radius": 2.2328977535481243,
+          "local_axis_length": 6.177875585649245
+        },
+        "driven_objects": [
+          "Tibia - Hexapod_3",
+          "Tibia Shell - Hexapod - V3_3"
+        ],
+        "note": "When the core object rotates, the core and driven objects rotate around the current live axis.",
+        "joint_label": "front_right_tibia_joint",
+        "initial_angle_degrees": 0.0,
+        "increment_sign": -1.0,
+        "joint_angle_degrees": 37.0,
+        "zero_pose": {
+          "Tibia - Hexapod_3": {
+            "position": [
+              -47.87943149952339,
+              -70.42240991907097,
+              37.26773181092173
+            ],
+            "rotation": [
+              -143.9999985313656,
+              90.0,
+              0.0
+            ]
+          },
+          "Micro servo SG90_15": {
+            "position": [
+              -48.68842494497869,
+              -69.83464174588748,
+              28.477389374192768
+            ],
+            "rotation": [
+              89.9999999903999,
+              -7.907698809521877e-09,
+              -126.00000146863422
+            ]
+          },
+          "Tibia Shell - Hexapod - V3_3": {
+            "position": [
+              -52.03243432450182,
+              -80.39178148494427,
+              -38.78637156252883
+            ],
+            "rotation": [
+              7.907627257940854e-09,
+              -9.600674829902513e-09,
+              143.9999985313658
+            ]
+          }
+        },
+        "min_angle_degrees": 0.0,
+        "max_angle_degrees": 90.0,
+        "theoretical_angle_at_min": 0.0,
+        "theoretical_angle_at_max": 90.0
+      }
+    }
+  ]
+}
