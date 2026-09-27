@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -41,6 +42,12 @@ from PySide6.QtWidgets import (
 )
 from pyvistaqt import QtInteractor
 from vtkmodules.vtkRenderingCore import vtkCellPicker
+
+try:
+    import serial
+    import serial.tools.list_ports
+except ImportError:
+    serial = None
 
 
 ALIGNMENT_FEATURES = [
@@ -360,11 +367,14 @@ class HexapodModeler(QMainWindow):
             },
         }
         self.gait_timer = QTimer(self)
-        self.gait_timer.setTimerType(Qt.PreciseTimer)
+        self.gait_timer.setTimerType(getattr(Qt, "PreciseTimer", Qt.TimerType.PreciseTimer))
         self.gait_timer.timeout.connect(self._advance_tripod_gait)
         self.tripod_active_group = "A"
         self.tripod_segment_index = 0
         self.tripod_segment_t = 0.0
+        self.body_config = self._default_body_config()
+        self.body_serial = None
+        self._updating_body_controls = False
         self.undo_stack: list[PoseAction] = []
         self.redo_stack: list[PoseAction] = []
         self.display_mode = "sharp"
@@ -394,6 +404,7 @@ class HexapodModeler(QMainWindow):
         self.mode_combo = QComboBox()
         self.mode_combo.addItem("Set Hexapod Geometry and constraints", "geometry")
         self.mode_combo.addItem("Hexapod movement logic", "movement_logic")
+        self.mode_combo.addItem("Connect to body", "body_connection")
         self.mode_combo.currentIndexChanged.connect(self._on_workspace_mode_changed)
 
         toolbar = self.addToolBar("Main tools")
@@ -638,6 +649,79 @@ class HexapodModeler(QMainWindow):
         self.gait_placeholder_label.setWordWrap(True)
         self.gait_placeholder_label.setVisible(False)
 
+        self.body_port_combo = QComboBox()
+        self.refresh_body_ports_button = QPushButton("Refresh ports")
+        self.refresh_body_ports_button.clicked.connect(self.refresh_body_ports)
+        self.body_baud_spin = self._make_spinbox(1200, 1000000, 9600)
+        self.body_baud_spin.setDecimals(0)
+        self.body_baud_spin.setEnabled(True)
+        self.body_baud_spin.setValue(float(self.body_config["baud_rate"]))
+        self.body_connect_button = QPushButton("Connect")
+        self.body_connect_button.clicked.connect(self.connect_body)
+        self.body_disconnect_button = QPushButton("Disconnect")
+        self.body_disconnect_button.setEnabled(False)
+        self.body_disconnect_button.clicked.connect(self.disconnect_body)
+        body_connection_buttons = QWidget()
+        body_connection_layout = QHBoxLayout(body_connection_buttons)
+        body_connection_layout.setContentsMargins(0, 0, 0, 0)
+        body_connection_layout.addWidget(self.body_connect_button)
+        body_connection_layout.addWidget(self.body_disconnect_button)
+        self.body_live_output_checkbox = QCheckBox("Send joint commands live")
+        self.body_live_output_checkbox.stateChanged.connect(self._on_body_live_output_changed)
+        self.body_status_label = QLabel("Body: disconnected")
+        self.body_status_label.setWordWrap(True)
+        self.body_ping_button = QPushButton("PING")
+        self.body_ping_button.clicked.connect(lambda: self.send_body_manual_command("PING"))
+        self.body_all_off_button = QPushButton("ALL_OFF")
+        self.body_all_off_button.clicked.connect(lambda: self.send_body_manual_command("ALL_OFF"))
+        body_command_buttons = QWidget()
+        body_command_layout = QHBoxLayout(body_command_buttons)
+        body_command_layout.setContentsMargins(0, 0, 0, 0)
+        body_command_layout.addWidget(self.body_ping_button)
+        body_command_layout.addWidget(self.body_all_off_button)
+        self.direct_channel_spin = self._make_spinbox(0, 31, 1)
+        self.direct_channel_spin.setDecimals(0)
+        self.direct_channel_spin.setEnabled(True)
+        self.direct_pulse_spin = self._make_spinbox(1000, 2000, 1)
+        self.direct_pulse_spin.setDecimals(0)
+        self.direct_pulse_spin.setEnabled(True)
+        self.direct_pulse_spin.setValue(1500)
+        self.direct_enabled_checkbox = QCheckBox("Enabled")
+        self.direct_enabled_checkbox.setChecked(True)
+        self.direct_send_button = QPushButton("Set channel")
+        self.direct_send_button.clicked.connect(self.send_direct_channel_command)
+        direct_channel_row = QWidget()
+        direct_channel_layout = QHBoxLayout(direct_channel_row)
+        direct_channel_layout.setContentsMargins(0, 0, 0, 0)
+        direct_channel_layout.addWidget(self.direct_enabled_checkbox)
+        direct_channel_layout.addWidget(self.direct_send_button)
+        self.body_mapping_label = QLabel("Selected joint mapping: none")
+        self.body_mapping_label.setWordWrap(True)
+        self.body_mapping_channel_spin = self._make_spinbox(-1, 31, 1)
+        self.body_mapping_channel_spin.setDecimals(0)
+        self.body_mapping_channel_spin.setEnabled(False)
+        self.body_mapping_channel_spin.valueChanged.connect(self._on_body_mapping_changed)
+        self.body_mapping_enabled_checkbox = QCheckBox("Output enabled for selected joint")
+        self.body_mapping_enabled_checkbox.setEnabled(False)
+        self.body_mapping_enabled_checkbox.stateChanged.connect(self._on_body_mapping_changed)
+        self.body_angle_a_spin = self._make_spinbox(-360, 360, 1)
+        self.body_angle_b_spin = self._make_spinbox(-360, 360, 1)
+        self.body_pulse_a_spin = self._make_spinbox(1000, 2000, 1)
+        self.body_pulse_b_spin = self._make_spinbox(1000, 2000, 1)
+        for spin in (self.body_angle_a_spin, self.body_angle_b_spin, self.body_pulse_a_spin, self.body_pulse_b_spin):
+            spin.setEnabled(False)
+            spin.valueChanged.connect(self._on_body_mapping_changed)
+        self.body_pulse_a_spin.setDecimals(0)
+        self.body_pulse_b_spin.setDecimals(0)
+        self.body_send_selected_button = QPushButton("Send selected joint")
+        self.body_send_selected_button.setEnabled(False)
+        self.body_send_selected_button.clicked.connect(self.send_selected_joint_to_body)
+        self.body_launch_gait_button = QPushButton("Launch selected gait on body")
+        self.body_launch_gait_button.clicked.connect(self.launch_selected_gait_on_body)
+        self.body_selected_gait_label = QLabel("Selected gait: Tripod")
+        self.body_selected_gait_label.setWordWrap(True)
+        self.refresh_body_ports()
+
         self.legs_tree = QTreeWidget()
         self.legs_tree.setHeaderLabels(["Legs"])
         self.legs_tree.setMinimumHeight(220)
@@ -700,8 +784,51 @@ class HexapodModeler(QMainWindow):
         movement_logic_layout.addLayout(movement_logic_form)
         movement_logic_layout.addStretch(1)
         movement_logic_panel.setMinimumHeight(300)
+
+        body_connection_panel = QWidget()
+        body_connection_panel.setObjectName("bodyConnectionPanel")
+        body_connection_panel.setStyleSheet("QWidget#bodyConnectionPanel { border-bottom: 1px solid #343a42; }")
+        body_connection_layout = QVBoxLayout(body_connection_panel)
+        body_connection_layout.setContentsMargins(12, 8, 10, 8)
+        body_communication_group = QGroupBox("Communication")
+        body_communication_form = QFormLayout(body_communication_group)
+        body_communication_form.addRow("COM port", self.body_port_combo)
+        body_communication_form.addRow(self.refresh_body_ports_button)
+        body_communication_form.addRow("Baud rate", self.body_baud_spin)
+        body_communication_form.addRow("Connection", body_connection_buttons)
+        body_communication_form.addRow(self.body_live_output_checkbox)
+        body_communication_form.addRow(self.body_status_label)
+
+        body_manual_group = QGroupBox("Manual channel control")
+        body_manual_form = QFormLayout(body_manual_group)
+        body_manual_form.addRow("Commands", body_command_buttons)
+        body_manual_form.addRow("Channel", self.direct_channel_spin)
+        body_manual_form.addRow("Ticks us", self.direct_pulse_spin)
+        body_manual_form.addRow(direct_channel_row)
+
+        body_joint_group = QGroupBox("Graphical joint selection")
+        body_joint_form = QFormLayout(body_joint_group)
+        body_joint_form.addRow(self.body_mapping_label)
+        body_joint_form.addRow("Channel", self.body_mapping_channel_spin)
+        body_joint_form.addRow(self.body_mapping_enabled_checkbox)
+        body_joint_form.addRow("Ticks at min", self.body_pulse_a_spin)
+        body_joint_form.addRow("Ticks at max", self.body_pulse_b_spin)
+        body_joint_form.addRow(self.body_send_selected_button)
+
+        body_gait_group = QGroupBox("Real body gait")
+        body_gait_form = QFormLayout(body_gait_group)
+        body_gait_form.addRow(self.body_selected_gait_label)
+        body_gait_form.addRow(self.body_launch_gait_button)
+        body_connection_layout.addWidget(QLabel("Connect to body"))
+        body_connection_layout.addWidget(body_communication_group)
+        body_connection_layout.addWidget(body_manual_group)
+        body_connection_layout.addWidget(body_joint_group)
+        body_connection_layout.addWidget(body_gait_group)
+        body_connection_layout.addStretch(1)
+        body_connection_panel.setMinimumHeight(300)
         self.geometry_controls_panel = controls_panel
         self.movement_logic_panel = movement_logic_panel
+        self.body_connection_panel = body_connection_panel
         self._load_tripod_leg_points_into_controls()
         self._on_gait_type_changed()
 
@@ -714,6 +841,7 @@ class HexapodModeler(QMainWindow):
         side_layout.addWidget(constraints_tree_panel)
         side_layout.addWidget(controls_panel)
         side_layout.addWidget(movement_logic_panel)
+        side_layout.addWidget(body_connection_panel)
         side_layout.addStretch(1)
 
 
@@ -941,7 +1069,7 @@ class HexapodModeler(QMainWindow):
     def _update_object_hover(self) -> None:
         self._clear_hover_highlight(render=False)
         object_name = self._pick_object_name_at_current_mouse_position()
-        if self.workspace_mode == "movement_logic" and self._dynamic_rotation_constraint_for(object_name) is None:
+        if self.workspace_mode in {"movement_logic", "body_connection"} and self._dynamic_rotation_constraint_for(object_name) is None:
             object_name = None
         if object_name != self.constraint_hover_object_name:
             self.constraint_hover_object_name = object_name
@@ -952,7 +1080,7 @@ class HexapodModeler(QMainWindow):
         if object_name is None:
             self._clear_object_selection()
             return
-        if self.workspace_mode == "movement_logic" and self._dynamic_rotation_constraint_for(object_name) is None:
+        if self.workspace_mode in {"movement_logic", "body_connection"} and self._dynamic_rotation_constraint_for(object_name) is None:
             self._clear_object_selection()
             return
         self._select_object_by_name(object_name)
@@ -2133,6 +2261,8 @@ class HexapodModeler(QMainWindow):
 
     def _apply_workspace_mode(self) -> None:
         is_geometry_mode = self.workspace_mode == "geometry"
+        is_movement_mode = self.workspace_mode == "movement_logic"
+        is_body_mode = self.workspace_mode == "body_connection"
         if not is_geometry_mode:
             if self.constraint_pick_mode:
                 self._reset_constraint_picking(clear_highlights=True, close_dialog=True)
@@ -2143,7 +2273,8 @@ class HexapodModeler(QMainWindow):
         self.scene_tree_panel.setVisible(is_geometry_mode)
         self.constraints_tree_panel.setVisible(is_geometry_mode)
         self.geometry_controls_panel.setVisible(is_geometry_mode)
-        self.movement_logic_panel.setVisible(not is_geometry_mode)
+        self.movement_logic_panel.setVisible(is_movement_mode)
+        self.body_connection_panel.setVisible(is_body_mode)
         self.import_action.setEnabled(is_geometry_mode)
         self.add_constraint_button.setEnabled(is_geometry_mode)
         self.constraints_tree.setEnabled(is_geometry_mode)
@@ -2206,6 +2337,7 @@ class HexapodModeler(QMainWindow):
             self.logic_joint_minus_button.setEnabled(motion_enabled and current_angle > min_angle + 1e-9)
             self.logic_joint_plus_button.setEnabled(motion_enabled and current_angle < max_angle - 1e-9)
         self._refresh_leg_cartesian_controls()
+        self._load_selected_into_body_controls()
 
     def _on_joint_metadata_changed(self) -> None:
         if self._updating_joint_controls:
@@ -2269,6 +2401,229 @@ class HexapodModeler(QMainWindow):
         core_name = item.data(0, Qt.UserRole)
         if core_name:
             self._select_object_by_name(core_name)
+
+    def _default_body_config(self) -> dict:
+        return {
+            "port": "",
+            "baud_rate": 115200,
+            "send_live": False,
+            "joint_mappings": {},
+        }
+
+    def _selected_joint_label(self) -> str:
+        constraint = self._dynamic_rotation_constraint_for(self.selected_name)
+        if constraint is None:
+            return ""
+        return str(constraint.parameters.get("joint_label", ""))
+
+    def _default_mapping_for_joint(self, joint_label: str) -> dict:
+        constraint = self._constraint_for_joint_label(joint_label)
+        min_angle = float(constraint.parameters.get("min_angle_degrees", -90.0)) if constraint else -90.0
+        max_angle = float(constraint.parameters.get("max_angle_degrees", 90.0)) if constraint else 90.0
+        return {
+            "channel": -1,
+            "enabled": True,
+            "angle_a": min_angle,
+            "pulse_a": 1000.0,
+            "angle_b": max_angle,
+            "pulse_b": 2000.0,
+        }
+
+    def _constraint_for_joint_label(self, joint_label: str) -> Optional[ConstraintRecord]:
+        if not joint_label:
+            return None
+        for constraint in self.constraints:
+            if constraint.type == "dynamic_rotation" and constraint.parameters.get("joint_label") == joint_label:
+                return constraint
+        return None
+
+    def _body_mapping_for_joint(self, joint_label: str) -> dict:
+        mappings = self.body_config.setdefault("joint_mappings", {})
+        if joint_label not in mappings:
+            mappings[joint_label] = self._default_mapping_for_joint(joint_label)
+        default_mapping = self._default_mapping_for_joint(joint_label)
+        for key, value in default_mapping.items():
+            mappings[joint_label].setdefault(key, value)
+        return mappings[joint_label]
+
+    def refresh_body_ports(self) -> None:
+        if not hasattr(self, "body_port_combo"):
+            return
+        previous_port = self.body_config.get("port", "") if hasattr(self, "body_config") else ""
+        self.body_port_combo.clear()
+        if serial is None:
+            self.body_port_combo.addItem("pyserial not installed", "")
+            return
+        ports = list(serial.tools.list_ports.comports())
+        for port in ports:
+            self.body_port_combo.addItem(f"{port.device} - {port.description}", port.device)
+        if not ports:
+            self.body_port_combo.addItem("No serial ports found", "")
+        if previous_port:
+            index = self.body_port_combo.findData(previous_port)
+            if index >= 0:
+                self.body_port_combo.setCurrentIndex(index)
+
+    def _set_body_status(self, text: str) -> None:
+        if hasattr(self, "body_status_label"):
+            self.body_status_label.setText(text)
+
+    def connect_body(self) -> None:
+        if serial is None:
+            self._set_body_status("Body: pyserial is not installed in this Python environment.")
+            return
+        port = self.body_port_combo.currentData()
+        if not port:
+            self._set_body_status("Body: select a COM port first.")
+            return
+        self.disconnect_body()
+        baud_rate = int(self.body_baud_spin.value())
+        try:
+            self.body_serial = serial.Serial(port=port, baudrate=baud_rate, timeout=0.25, write_timeout=0.25)
+        except Exception as exc:
+            self.body_serial = None
+            self._set_body_status(f"Body: connection failed ({exc}).")
+            return
+        self.body_config["port"] = port
+        self.body_config["baud_rate"] = baud_rate
+        self.body_connect_button.setEnabled(False)
+        self.body_disconnect_button.setEnabled(True)
+        self._set_body_status(f"Body: connected to {port} at {baud_rate} baud.")
+
+    def disconnect_body(self) -> None:
+        if self.body_serial is not None:
+            try:
+                self.body_serial.close()
+            except Exception:
+                pass
+        self.body_serial = None
+        if hasattr(self, "body_connect_button"):
+            self.body_connect_button.setEnabled(True)
+            self.body_disconnect_button.setEnabled(False)
+
+    def _send_body_command(self, command: str) -> Optional[str]:
+        if self.body_serial is None or not getattr(self.body_serial, "is_open", False):
+            self._set_body_status("Body: not connected.")
+            return None
+        try:
+            self.body_serial.write((command.strip() + "\n").encode("ascii"))
+            self.body_serial.flush()
+            response = self.body_serial.readline().decode("ascii", errors="replace").strip()
+        except Exception as exc:
+            self._set_body_status(f"Body: serial error ({exc}).")
+            return None
+        if response:
+            self._set_body_status(f"Body: {command} -> {response}")
+        else:
+            self._set_body_status(f"Body: {command} sent, no reply.")
+        return response
+
+    def send_body_manual_command(self, command: str) -> None:
+        self._send_body_command(command)
+
+    def send_direct_channel_command(self) -> None:
+        channel = int(self.direct_channel_spin.value())
+        pulse_us = int(self.direct_pulse_spin.value())
+        enabled = 1 if self.direct_enabled_checkbox.isChecked() else 0
+        self._send_body_command(f"SETG {channel} {pulse_us} {enabled}")
+
+    def _on_body_live_output_changed(self) -> None:
+        self.body_config["send_live"] = bool(self.body_live_output_checkbox.isChecked())
+
+    def _load_selected_into_body_controls(self) -> None:
+        if not hasattr(self, "body_mapping_label"):
+            return
+        joint_label = self._selected_joint_label()
+        enabled = self.workspace_mode in {"movement_logic", "body_connection"} and bool(joint_label)
+        self._updating_body_controls = True
+        try:
+            if not enabled:
+                self.body_mapping_label.setText("Selected joint mapping: none")
+                self.body_mapping_channel_spin.setValue(-1)
+                self.body_mapping_enabled_checkbox.setChecked(False)
+                for spin in (self.body_angle_a_spin, self.body_angle_b_spin, self.body_pulse_a_spin, self.body_pulse_b_spin):
+                    spin.setValue(0.0)
+            else:
+                mapping = self._body_mapping_for_joint(joint_label)
+                self.body_mapping_label.setText(f"Selected joint mapping: {joint_label}")
+                self.body_mapping_channel_spin.setValue(float(mapping.get("channel", -1)))
+                self.body_mapping_enabled_checkbox.setChecked(bool(mapping.get("enabled", True)))
+                constraint = self._constraint_for_joint_label(joint_label)
+                min_angle = float(constraint.parameters.get("min_angle_degrees", 0.0)) if constraint else 0.0
+                max_angle = float(constraint.parameters.get("max_angle_degrees", 0.0)) if constraint else 0.0
+                self.body_angle_a_spin.setValue(min_angle)
+                self.body_pulse_a_spin.setValue(float(mapping.get("pulse_a", 1000.0)))
+                self.body_angle_b_spin.setValue(max_angle)
+                self.body_pulse_b_spin.setValue(float(mapping.get("pulse_b", 2000.0)))
+        finally:
+            self._updating_body_controls = False
+        self.body_mapping_channel_spin.setEnabled(enabled)
+        self.body_mapping_enabled_checkbox.setEnabled(enabled)
+        self.body_send_selected_button.setEnabled(enabled)
+        for spin in (self.body_angle_a_spin, self.body_angle_b_spin, self.body_pulse_a_spin, self.body_pulse_b_spin):
+            spin.setEnabled(enabled)
+
+    def _on_body_mapping_changed(self) -> None:
+        if self._updating_body_controls:
+            return
+        joint_label = self._selected_joint_label()
+        if not joint_label:
+            return
+        mapping = self._body_mapping_for_joint(joint_label)
+        constraint = self._constraint_for_joint_label(joint_label)
+        mapping["channel"] = int(self.body_mapping_channel_spin.value())
+        mapping["enabled"] = bool(self.body_mapping_enabled_checkbox.isChecked())
+        mapping["angle_a"] = float(constraint.parameters.get("min_angle_degrees", 0.0)) if constraint else float(self.body_angle_a_spin.value())
+        mapping["pulse_a"] = float(self.body_pulse_a_spin.value())
+        mapping["angle_b"] = float(constraint.parameters.get("max_angle_degrees", 0.0)) if constraint else float(self.body_angle_b_spin.value())
+        mapping["pulse_b"] = float(self.body_pulse_b_spin.value())
+
+    def _pulse_for_joint_angle(self, joint_label: str, angle_degrees: float) -> Optional[int]:
+        mapping = self._body_mapping_for_joint(joint_label)
+        if not mapping.get("enabled", True):
+            return None
+        channel = int(mapping.get("channel", -1))
+        if channel < 0 or channel > 31:
+            return None
+        constraint = self._constraint_for_joint_label(joint_label)
+        pulse = self._map_linear(
+            float(angle_degrees),
+            float(constraint.parameters.get("min_angle_degrees", mapping.get("angle_a", 0.0))) if constraint else float(mapping.get("angle_a", 0.0)),
+            float(constraint.parameters.get("max_angle_degrees", mapping.get("angle_b", 0.0))) if constraint else float(mapping.get("angle_b", 0.0)),
+            float(mapping.get("pulse_a", 1000.0)),
+            float(mapping.get("pulse_b", 2000.0)),
+        )
+        if pulse is None:
+            return None
+        return int(round(float(np.clip(pulse, 1000.0, 2000.0))))
+
+    def _send_joint_angle_to_body(self, joint_label: str, angle_degrees: float, force: bool = False) -> None:
+        if not force and not self.body_config.get("send_live", False):
+            return
+        mapping = self._body_mapping_for_joint(joint_label)
+        channel = int(mapping.get("channel", -1))
+        pulse = self._pulse_for_joint_angle(joint_label, angle_degrees)
+        if pulse is None:
+            return
+        self._send_body_command(f"SETG {channel} {pulse} 1")
+
+    def send_selected_joint_to_body(self) -> None:
+        joint_label = self._selected_joint_label()
+        constraint = self._constraint_for_joint_label(joint_label)
+        if constraint is None:
+            self._set_body_status("Body: select a mapped joint first.")
+            return
+        angle = float(constraint.parameters.get("joint_angle_degrees", 0.0))
+        self._send_joint_angle_to_body(joint_label, angle, force=True)
+
+    def launch_selected_gait_on_body(self) -> None:
+        self.body_live_output_checkbox.setChecked(True)
+        self.body_config["send_live"] = True
+        gait_type = self.gait_type_combo.currentData()
+        if gait_type == "tripod":
+            self.start_tripod_gait()
+        else:
+            self._set_body_status("Body: selected gait is not implemented yet.")
 
     def _on_kinematics_segments_changed(self) -> None:
         if not hasattr(self, "segment_a_spin"):
@@ -2460,6 +2815,8 @@ class HexapodModeler(QMainWindow):
             if not self._rotate_core_around_dynamic_axis_by(core_name, delta * increment_sign):
                 return False
             constraint.parameters["joint_angle_degrees"] = target_angle
+            joint_label = str(constraint.parameters.get("joint_label", ""))
+            self._send_joint_angle_to_body(joint_label, target_angle)
             changed = True
         if changed:
             self._load_selected_into_joint_controls()
@@ -2516,6 +2873,8 @@ class HexapodModeler(QMainWindow):
     def _on_gait_type_changed(self) -> None:
         gait_type = self.gait_type_combo.currentData()
         self.gait_config["type"] = gait_type
+        if hasattr(self, "body_selected_gait_label"):
+            self.body_selected_gait_label.setText(f"Selected gait: {self.gait_type_combo.currentText()}")
         is_tripod = gait_type == "tripod"
         self.tripod_config_widget.setVisible(is_tripod)
         self.gait_placeholder_label.setVisible(not is_tripod)
@@ -2575,7 +2934,7 @@ class HexapodModeler(QMainWindow):
         self._load_tripod_leg_points_into_controls()
 
     def start_tripod_gait(self) -> None:
-        if self.workspace_mode != "movement_logic":
+        if self.workspace_mode not in {"movement_logic", "body_connection"}:
             return
         missing = [leg_key for leg_key, _label in LEG_LABELS if set(self._leg_joint_constraints(leg_key)) != {"coxa", "femur", "tibia"}]
         if missing:
@@ -2688,6 +3047,7 @@ class HexapodModeler(QMainWindow):
         increment_sign = float(constraint.parameters.get("increment_sign", 1.0))
         if self._rotate_core_around_dynamic_axis_by(self.selected_name, actual_step * increment_sign):
             constraint.parameters["joint_angle_degrees"] = target_angle
+            self._send_joint_angle_to_body(str(constraint.parameters.get("joint_label", "")), target_angle)
             self._load_selected_into_joint_controls()
             self._rebuild_constraints_tree()
             self._rebuild_legs_tree()
@@ -3217,10 +3577,15 @@ class HexapodModeler(QMainWindow):
         file_path, _ = QFileDialog.getSaveFileName(self, "Save layout", "hexapod_scene.json", "JSON (*.json)")
         if not file_path:
             return
+        if hasattr(self, "body_baud_spin"):
+            self.body_config["baud_rate"] = int(self.body_baud_spin.value())
+            self.body_config["port"] = self.body_port_combo.currentData() or self.body_config.get("port", "")
+            self.body_config["send_live"] = bool(self.body_live_output_checkbox.isChecked())
         data = {
             "format_version": 2,
             "kinematics_segments": self.kinematics_segments,
             "gait_config": self.gait_config,
+            "body_config": self.body_config,
             "objects": [asdict(obj) for obj in self.objects.values()],
             "constraints": [asdict(constraint) for constraint in self.constraints],
         }
@@ -3235,6 +3600,7 @@ class HexapodModeler(QMainWindow):
         constraint_data = [] if isinstance(data, list) else data.get("constraints", [])
         segment_data = {} if isinstance(data, list) else data.get("kinematics_segments", {})
         gait_data = {} if isinstance(data, list) else data.get("gait_config", {})
+        body_data = {} if isinstance(data, list) else data.get("body_config", {})
         self.kinematics_segments = {
             "a": float(segment_data.get("a", 3.4)),
             "b": float(segment_data.get("b", 5.4)),
@@ -3248,6 +3614,13 @@ class HexapodModeler(QMainWindow):
                 "points": gait_data.get("tripod", {}).get("points", {}),
             },
         }
+        default_body_config = self._default_body_config()
+        self.body_config = {
+            "port": body_data.get("port", default_body_config["port"]),
+            "baud_rate": int(body_data.get("baud_rate", default_body_config["baud_rate"])),
+            "send_live": bool(body_data.get("send_live", default_body_config["send_live"])),
+            "joint_mappings": body_data.get("joint_mappings", {}),
+        }
         if hasattr(self, "segment_a_spin"):
             self.segment_a_spin.setValue(self.kinematics_segments["a"])
             self.segment_b_spin.setValue(self.kinematics_segments["b"])
@@ -3256,6 +3629,9 @@ class HexapodModeler(QMainWindow):
             self.gait_type_combo.setCurrentIndex(gait_index if gait_index >= 0 else 0)
             self.tripod_interpolation_step_spin.setValue(float(self.gait_config["tripod"]["interpolation_step"]))
             self.tripod_interval_spin.setValue(float(self.gait_config["tripod"]["interval_ms"]))
+            self.body_baud_spin.setValue(float(self.body_config["baud_rate"]))
+            self.body_live_output_checkbox.setChecked(bool(self.body_config["send_live"]))
+            self.refresh_body_ports()
 
         self.clear_scene()
         name_map: dict[str, str] = {}
@@ -3296,6 +3672,7 @@ class HexapodModeler(QMainWindow):
         self._refresh_leg_cartesian_controls()
         self._load_tripod_leg_points_into_controls()
         self._on_gait_type_changed()
+        self._load_selected_into_body_controls()
         self.reset_camera()
 
     def _remap_constraint_parameters(self, parameters: dict, name_map: dict[str, str]) -> dict:
@@ -3382,6 +3759,7 @@ class HexapodModeler(QMainWindow):
         self.plotter.reset_camera()
 
     def closeEvent(self, event) -> None:
+        self.disconnect_body()
         try:
             self.plotter.disable_eye_dome_lighting()
         except Exception:
