@@ -360,6 +360,7 @@ class HexapodModeler(QMainWindow):
             },
         }
         self.gait_timer = QTimer(self)
+        self.gait_timer.setTimerType(Qt.PreciseTimer)
         self.gait_timer.timeout.connect(self._advance_tripod_gait)
         self.tripod_active_group = "A"
         self.tripod_segment_index = 0
@@ -600,13 +601,14 @@ class HexapodModeler(QMainWindow):
                 point_row_layout.addWidget(spin)
             self.tripod_point_spins[point_key] = spins
             tripod_layout.addRow(point_label, point_row)
-        self.tripod_interpolation_step_spin = self._make_spinbox(0.001, 1.0, 0.01)
+        self.tripod_interpolation_step_spin = self._make_spinbox(0.000001, 1.0, 0.0001)
         self.tripod_interpolation_step_spin.setEnabled(True)
+        self.tripod_interpolation_step_spin.setDecimals(6)
         self.tripod_interpolation_step_spin.setValue(0.1)
         self.tripod_interpolation_step_spin.valueChanged.connect(self._on_tripod_timing_changed)
-        self.tripod_interval_spin = self._make_spinbox(10, 5000, 10)
+        self.tripod_interval_spin = self._make_spinbox(0.0, 5000, 0.01)
         self.tripod_interval_spin.setEnabled(True)
-        self.tripod_interval_spin.setDecimals(0)
+        self.tripod_interval_spin.setDecimals(3)
         self.tripod_interval_spin.setValue(120)
         self.tripod_interval_spin.valueChanged.connect(self._on_tripod_timing_changed)
         self.tripod_capture_button = QPushButton("Use selected foot position")
@@ -2548,9 +2550,15 @@ class HexapodModeler(QMainWindow):
     def _on_tripod_timing_changed(self) -> None:
         tripod = self.gait_config.setdefault("tripod", {})
         tripod["interpolation_step"] = float(self.tripod_interpolation_step_spin.value())
-        tripod["interval_ms"] = int(self.tripod_interval_spin.value())
+        tripod["interval_ms"] = float(self.tripod_interval_spin.value())
         if self.gait_timer.isActive():
-            self.gait_timer.setInterval(tripod["interval_ms"])
+            self.gait_timer.setInterval(self._tripod_timer_interval_ms())
+
+    def _tripod_timer_interval_ms(self) -> int:
+        interval_ms = float(self.gait_config.get("tripod", {}).get("interval_ms", 120.0))
+        if interval_ms < 1.0:
+            return 0
+        return max(1, int(round(interval_ms)))
 
     def capture_tripod_point_from_selected_leg(self) -> None:
         selected_leg = self._selected_leg_key()
@@ -2586,7 +2594,7 @@ class HexapodModeler(QMainWindow):
         self.tripod_run_button.setEnabled(False)
         self.tripod_stop_button.setEnabled(True)
         self.tripod_status_label.setText("Tripod gait: running")
-        self.gait_timer.start(int(self.gait_config["tripod"].get("interval_ms", 120)))
+        self.gait_timer.start(self._tripod_timer_interval_ms())
 
     def stop_tripod_gait(self) -> None:
         self.gait_timer.stop()
@@ -3236,7 +3244,7 @@ class HexapodModeler(QMainWindow):
             "type": gait_data.get("type", "tripod"),
             "tripod": {
                 "interpolation_step": float(gait_data.get("tripod", {}).get("interpolation_step", 0.1)),
-                "interval_ms": int(gait_data.get("tripod", {}).get("interval_ms", 120)),
+                "interval_ms": float(gait_data.get("tripod", {}).get("interval_ms", 120.0)),
                 "points": gait_data.get("tripod", {}).get("points", {}),
             },
         }
