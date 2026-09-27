@@ -10,7 +10,7 @@ from typing import Optional
 
 import numpy as np
 import pyvista as pv
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -82,6 +82,15 @@ LEG_LABELS = [
     ("front_right", "Front right"),
     ("middle_right", "Middle right"),
     ("rear_right", "Rear right"),
+]
+TRIPOD_GROUP_A = {"front_left", "middle_right", "rear_left"}
+TRIPOD_GROUP_B = {"front_right", "middle_left", "rear_right"}
+TRIPOD_POINT_KEYS = [
+    ("start", "Start"),
+    ("lifted", "Lifted"),
+    ("forward_up", "Forward up"),
+    ("forward_down", "Forward down"),
+    ("rear_down", "Rear/down"),
 ]
 SURFACE_ANGLE_TOLERANCE_DEG = 8.0
 SURFACE_PLANE_TOLERANCE_RATIO = 0.002
@@ -342,6 +351,19 @@ class HexapodModeler(QMainWindow):
         self._last_dynamic_axis_angle = 0.0
         self._last_logic_joint_angle = 0.0
         self.kinematics_segments = {"a": 3.4, "b": 5.4, "c": 7.3}
+        self.gait_config = {
+            "type": "tripod",
+            "tripod": {
+                "interpolation_step": 0.1,
+                "interval_ms": 120,
+                "points": {},
+            },
+        }
+        self.gait_timer = QTimer(self)
+        self.gait_timer.timeout.connect(self._advance_tripod_gait)
+        self.tripod_active_group = "A"
+        self.tripod_segment_index = 0
+        self.tripod_segment_t = 0.0
         self.undo_stack: list[PoseAction] = []
         self.redo_stack: list[PoseAction] = []
         self.display_mode = "sharp"
@@ -548,6 +570,72 @@ class HexapodModeler(QMainWindow):
             spin.setEnabled(False)
             spin.valueChanged.connect(self._on_leg_cartesian_changed)
 
+        self.gait_type_combo = QComboBox()
+        self.gait_type_combo.addItem("Tripod", "tripod")
+        self.gait_type_combo.addItem("Ripple", "ripple")
+        self.gait_type_combo.addItem("Wave", "wave")
+        self.gait_type_combo.addItem("Tetrapod", "tetrapod")
+        self.gait_type_combo.addItem("Turn in place", "turn_in_place")
+        self.gait_type_combo.addItem("Side step / crab", "side_step")
+        self.gait_type_combo.currentIndexChanged.connect(self._on_gait_type_changed)
+        self.tripod_config_widget = QWidget()
+        tripod_layout = QFormLayout(self.tripod_config_widget)
+        tripod_layout.setContentsMargins(0, 0, 0, 0)
+        self.tripod_leg_combo = QComboBox()
+        for leg_key, leg_label in LEG_LABELS:
+            group_label = "A" if leg_key in TRIPOD_GROUP_A else "B"
+            self.tripod_leg_combo.addItem(f"{leg_label} (group {group_label})", leg_key)
+        self.tripod_leg_combo.currentIndexChanged.connect(self._load_tripod_leg_points_into_controls)
+        tripod_layout.addRow("Edited leg", self.tripod_leg_combo)
+        self.tripod_point_spins: dict[str, list[QDoubleSpinBox]] = {}
+        for point_key, point_label in TRIPOD_POINT_KEYS:
+            point_row = QWidget()
+            point_row_layout = QHBoxLayout(point_row)
+            point_row_layout.setContentsMargins(0, 0, 0, 0)
+            point_row_layout.setSpacing(4)
+            spins = [self._make_spinbox(-10000, 10000, 0.1) for _ in range(3)]
+            for spin in spins:
+                spin.setEnabled(True)
+                spin.valueChanged.connect(self._on_tripod_point_changed)
+                point_row_layout.addWidget(spin)
+            self.tripod_point_spins[point_key] = spins
+            tripod_layout.addRow(point_label, point_row)
+        self.tripod_interpolation_step_spin = self._make_spinbox(0.001, 1.0, 0.01)
+        self.tripod_interpolation_step_spin.setEnabled(True)
+        self.tripod_interpolation_step_spin.setValue(0.1)
+        self.tripod_interpolation_step_spin.valueChanged.connect(self._on_tripod_timing_changed)
+        self.tripod_interval_spin = self._make_spinbox(10, 5000, 10)
+        self.tripod_interval_spin.setEnabled(True)
+        self.tripod_interval_spin.setDecimals(0)
+        self.tripod_interval_spin.setValue(120)
+        self.tripod_interval_spin.valueChanged.connect(self._on_tripod_timing_changed)
+        self.tripod_capture_button = QPushButton("Use selected foot position")
+        self.tripod_capture_button.clicked.connect(self.capture_tripod_point_from_selected_leg)
+        self.tripod_capture_point_combo = QComboBox()
+        for point_key, point_label in TRIPOD_POINT_KEYS:
+            self.tripod_capture_point_combo.addItem(point_label, point_key)
+        self.tripod_run_button = QPushButton("Run tripod")
+        self.tripod_run_button.clicked.connect(self.start_tripod_gait)
+        self.tripod_stop_button = QPushButton("Stop tripod")
+        self.tripod_stop_button.setEnabled(False)
+        self.tripod_stop_button.clicked.connect(self.stop_tripod_gait)
+        tripod_buttons = QWidget()
+        tripod_buttons_layout = QHBoxLayout(tripod_buttons)
+        tripod_buttons_layout.setContentsMargins(0, 0, 0, 0)
+        tripod_buttons_layout.addWidget(self.tripod_run_button)
+        tripod_buttons_layout.addWidget(self.tripod_stop_button)
+        self.tripod_status_label = QLabel("Tripod gait: stopped")
+        self.tripod_status_label.setWordWrap(True)
+        tripod_layout.addRow("Interpolation step", self.tripod_interpolation_step_spin)
+        tripod_layout.addRow("Interval ms", self.tripod_interval_spin)
+        tripod_layout.addRow("Capture point", self.tripod_capture_point_combo)
+        tripod_layout.addRow(self.tripod_capture_button)
+        tripod_layout.addRow("Playback", tripod_buttons)
+        tripod_layout.addRow(self.tripod_status_label)
+        self.gait_placeholder_label = QLabel("This gait menu is reserved for the next implementation.")
+        self.gait_placeholder_label.setWordWrap(True)
+        self.gait_placeholder_label.setVisible(False)
+
         self.legs_tree = QTreeWidget()
         self.legs_tree.setHeaderLabels(["Legs"])
         self.legs_tree.setMinimumHeight(220)
@@ -600,6 +688,10 @@ class HexapodModeler(QMainWindow):
         movement_logic_form.addRow("End effector X", self.leg_position_spins[0])
         movement_logic_form.addRow("End effector Y", self.leg_position_spins[1])
         movement_logic_form.addRow("End effector Z", self.leg_position_spins[2])
+        movement_logic_form.addRow(QLabel("Gait logic"))
+        movement_logic_form.addRow("Gait type", self.gait_type_combo)
+        movement_logic_form.addRow(self.tripod_config_widget)
+        movement_logic_form.addRow(self.gait_placeholder_label)
         movement_logic_layout.addWidget(QLabel("Hexapod movement logic"))
         movement_logic_layout.addWidget(QLabel("Legs"))
         movement_logic_layout.addWidget(self.legs_tree)
@@ -608,6 +700,8 @@ class HexapodModeler(QMainWindow):
         movement_logic_panel.setMinimumHeight(300)
         self.geometry_controls_panel = controls_panel
         self.movement_logic_panel = movement_logic_panel
+        self._load_tripod_leg_points_into_controls()
+        self._on_gait_type_changed()
 
         side_panel = QWidget()
         side_panel.setMinimumHeight(800)
@@ -2042,6 +2136,8 @@ class HexapodModeler(QMainWindow):
                 self._reset_constraint_picking(clear_highlights=True, close_dialog=True)
             if self.coincidence_mode:
                 self.exit_coincidence_mode()
+        elif hasattr(self, "gait_timer") and self.gait_timer.isActive():
+            self.stop_tripod_gait()
         self.scene_tree_panel.setVisible(is_geometry_mode)
         self.constraints_tree_panel.setVisible(is_geometry_mode)
         self.geometry_controls_panel.setVisible(is_geometry_mode)
@@ -2368,7 +2464,7 @@ class HexapodModeler(QMainWindow):
             self._rebuild_constraints_tree()
             self._rebuild_legs_tree()
             self._refresh_leg_cartesian_controls()
-        return changed
+        return True
 
     def _on_leg_cartesian_changed(self) -> None:
         if self._updating_cartesian_controls or self.workspace_mode != "movement_logic":
@@ -2384,6 +2480,171 @@ class HexapodModeler(QMainWindow):
             return
         if self._apply_leg_visual_angles(leg_key, visual_angles):
             self.coincidence_status.setText(f"Kinematics: moved {leg_key} foot to x={x:.3f}, y={y:.3f}, z={z:.3f}.")
+
+    def _default_tripod_points_for_leg(self, leg_key: str) -> dict[str, list[float]]:
+        current_position = self._current_leg_cartesian(leg_key)
+        if current_position is None:
+            current_position = (
+                self.kinematics_segments["a"] + self.kinematics_segments["b"] * 0.5,
+                0.0,
+                -self.kinematics_segments["c"] * 0.5,
+            )
+        x, y, z = [float(value) for value in current_position]
+        step = max(1.0, self.kinematics_segments["a"] * 0.4)
+        lift = max(0.5, self.kinematics_segments["a"] * 0.25)
+        return {
+            "start": [x, y, z],
+            "lifted": [x, y, z + lift],
+            "forward_up": [x + step, y, z + lift],
+            "forward_down": [x + step, y, z],
+            "rear_down": [x - step, y, z],
+        }
+
+    def _tripod_points(self) -> dict:
+        return self.gait_config.setdefault("tripod", {}).setdefault("points", {})
+
+    def _ensure_tripod_leg_points(self, leg_key: str) -> dict[str, list[float]]:
+        points = self._tripod_points()
+        if leg_key not in points:
+            points[leg_key] = self._default_tripod_points_for_leg(leg_key)
+        for point_key, _point_label in TRIPOD_POINT_KEYS:
+            points[leg_key].setdefault(point_key, self._default_tripod_points_for_leg(leg_key)[point_key])
+        return points[leg_key]
+
+    def _on_gait_type_changed(self) -> None:
+        gait_type = self.gait_type_combo.currentData()
+        self.gait_config["type"] = gait_type
+        is_tripod = gait_type == "tripod"
+        self.tripod_config_widget.setVisible(is_tripod)
+        self.gait_placeholder_label.setVisible(not is_tripod)
+        if not is_tripod and self.gait_timer.isActive():
+            self.stop_tripod_gait()
+
+    def _load_tripod_leg_points_into_controls(self) -> None:
+        if not hasattr(self, "tripod_leg_combo"):
+            return
+        leg_key = self.tripod_leg_combo.currentData()
+        if not leg_key:
+            return
+        leg_points = self._ensure_tripod_leg_points(leg_key)
+        self._updating_cartesian_controls = True
+        try:
+            for point_key, _point_label in TRIPOD_POINT_KEYS:
+                for spin, value in zip(self.tripod_point_spins[point_key], leg_points[point_key]):
+                    spin.setValue(float(value))
+        finally:
+            self._updating_cartesian_controls = False
+
+    def _on_tripod_point_changed(self) -> None:
+        if self._updating_cartesian_controls:
+            return
+        leg_key = self.tripod_leg_combo.currentData()
+        if not leg_key:
+            return
+        leg_points = self._ensure_tripod_leg_points(leg_key)
+        for point_key, _point_label in TRIPOD_POINT_KEYS:
+            leg_points[point_key] = [float(spin.value()) for spin in self.tripod_point_spins[point_key]]
+
+    def _on_tripod_timing_changed(self) -> None:
+        tripod = self.gait_config.setdefault("tripod", {})
+        tripod["interpolation_step"] = float(self.tripod_interpolation_step_spin.value())
+        tripod["interval_ms"] = int(self.tripod_interval_spin.value())
+        if self.gait_timer.isActive():
+            self.gait_timer.setInterval(tripod["interval_ms"])
+
+    def capture_tripod_point_from_selected_leg(self) -> None:
+        selected_leg = self._selected_leg_key()
+        edited_leg = self.tripod_leg_combo.currentData()
+        if not selected_leg or selected_leg != edited_leg:
+            self.coincidence_status.setText("Tripod gait: select a joint from the edited leg before capturing.")
+            return
+        position = self._current_leg_cartesian(selected_leg)
+        if position is None:
+            self.coincidence_status.setText("Tripod gait: selected leg has no complete kinematics.")
+            return
+        point_key = self.tripod_capture_point_combo.currentData()
+        self._ensure_tripod_leg_points(edited_leg)[point_key] = [float(value) for value in position]
+        self._load_tripod_leg_points_into_controls()
+
+    def start_tripod_gait(self) -> None:
+        if self.workspace_mode != "movement_logic":
+            return
+        missing = [leg_key for leg_key, _label in LEG_LABELS if set(self._leg_joint_constraints(leg_key)) != {"coxa", "femur", "tibia"}]
+        if missing:
+            self.coincidence_status.setText(f"Tripod gait: missing complete joint setup for {', '.join(missing)}.")
+            return
+        for leg_key, _label in LEG_LABELS:
+            leg_points = self._ensure_tripod_leg_points(leg_key)
+            start_point = leg_points["start"]
+            visual_angles = self._leg_visual_angles_for_cartesian(leg_key, start_point[0], start_point[1], start_point[2])
+            if visual_angles is None or not self._apply_leg_visual_angles(leg_key, visual_angles):
+                self.coincidence_status.setText(f"Tripod gait: start point for {leg_key} is unreachable or outside limits.")
+                return
+        self._on_tripod_timing_changed()
+        self.tripod_segment_index = 0
+        self.tripod_segment_t = 0.0
+        self.tripod_run_button.setEnabled(False)
+        self.tripod_stop_button.setEnabled(True)
+        self.tripod_status_label.setText("Tripod gait: running")
+        self.gait_timer.start(int(self.gait_config["tripod"].get("interval_ms", 120)))
+
+    def stop_tripod_gait(self) -> None:
+        self.gait_timer.stop()
+        self.tripod_run_button.setEnabled(True)
+        self.tripod_stop_button.setEnabled(False)
+        self.tripod_status_label.setText("Tripod gait: stopped")
+
+    def _tripod_segments(self) -> list[tuple[str, str, str]]:
+        return [
+            ("A", "start", "lifted"),
+            ("A", "lifted", "forward_up"),
+            ("A", "forward_up", "forward_down"),
+            ("B", "start", "lifted"),
+            ("A", "forward_down", "rear_down"),
+            ("B", "lifted", "forward_up"),
+            ("B", "forward_up", "forward_down"),
+            ("A", "rear_down", "lifted"),
+            ("B", "forward_down", "rear_down"),
+        ]
+
+    def _legs_for_tripod_group(self, group_name: str) -> list[str]:
+        group = TRIPOD_GROUP_A if group_name == "A" else TRIPOD_GROUP_B
+        return [leg_key for leg_key, _label in LEG_LABELS if leg_key in group]
+
+    def _interpolate_point(self, start: list[float], end: list[float], t: float) -> list[float]:
+        return [float(start[index] + (end[index] - start[index]) * t) for index in range(3)]
+
+    def _move_tripod_group(self, group_name: str, start_key: str, end_key: str, t: float) -> bool:
+        for leg_key in self._legs_for_tripod_group(group_name):
+            leg_points = self._ensure_tripod_leg_points(leg_key)
+            target = self._interpolate_point(leg_points[start_key], leg_points[end_key], t)
+            visual_angles = self._leg_visual_angles_for_cartesian(leg_key, target[0], target[1], target[2])
+            if visual_angles is None or not self._apply_leg_visual_angles(leg_key, visual_angles):
+                self.coincidence_status.setText(f"Tripod gait: target for {leg_key} is unreachable or outside limits.")
+                self.stop_tripod_gait()
+                return False
+        return True
+
+    def _advance_tripod_gait(self) -> None:
+        segments = self._tripod_segments()
+        if self.tripod_segment_index >= len(segments):
+            self.tripod_segment_index = 1
+            self.tripod_segment_t = 0.0
+        group_name, start_key, end_key = segments[self.tripod_segment_index]
+        t = float(np.clip(self.tripod_segment_t, 0.0, 1.0))
+        if not self._move_tripod_group(group_name, start_key, end_key, t):
+            return
+        self.tripod_status_label.setText(
+            f"Tripod gait: group {group_name}, {start_key} -> {end_key}, t={t:.2f}"
+        )
+        step = float(self.gait_config.get("tripod", {}).get("interpolation_step", 0.1))
+        self.tripod_segment_t += step
+        if self.tripod_segment_t > 1.0 + 1e-9:
+            self.tripod_segment_index += 1
+            if self.tripod_segment_index >= len(segments):
+                self.tripod_segment_index = 1
+            self.tripod_segment_t = 0.0
+
     def set_selected_joint_zero_position(self) -> None:
         constraint = self._dynamic_rotation_constraint_for(self.selected_name)
         if constraint is None:
@@ -2951,6 +3212,7 @@ class HexapodModeler(QMainWindow):
         data = {
             "format_version": 2,
             "kinematics_segments": self.kinematics_segments,
+            "gait_config": self.gait_config,
             "objects": [asdict(obj) for obj in self.objects.values()],
             "constraints": [asdict(constraint) for constraint in self.constraints],
         }
@@ -2964,15 +3226,28 @@ class HexapodModeler(QMainWindow):
         object_data = data if isinstance(data, list) else data.get("objects", [])
         constraint_data = [] if isinstance(data, list) else data.get("constraints", [])
         segment_data = {} if isinstance(data, list) else data.get("kinematics_segments", {})
+        gait_data = {} if isinstance(data, list) else data.get("gait_config", {})
         self.kinematics_segments = {
             "a": float(segment_data.get("a", 3.4)),
             "b": float(segment_data.get("b", 5.4)),
             "c": float(segment_data.get("c", 7.3)),
         }
+        self.gait_config = {
+            "type": gait_data.get("type", "tripod"),
+            "tripod": {
+                "interpolation_step": float(gait_data.get("tripod", {}).get("interpolation_step", 0.1)),
+                "interval_ms": int(gait_data.get("tripod", {}).get("interval_ms", 120)),
+                "points": gait_data.get("tripod", {}).get("points", {}),
+            },
+        }
         if hasattr(self, "segment_a_spin"):
             self.segment_a_spin.setValue(self.kinematics_segments["a"])
             self.segment_b_spin.setValue(self.kinematics_segments["b"])
             self.segment_c_spin.setValue(self.kinematics_segments["c"])
+            gait_index = self.gait_type_combo.findData(self.gait_config["type"])
+            self.gait_type_combo.setCurrentIndex(gait_index if gait_index >= 0 else 0)
+            self.tripod_interpolation_step_spin.setValue(float(self.gait_config["tripod"]["interpolation_step"]))
+            self.tripod_interval_spin.setValue(float(self.gait_config["tripod"]["interval_ms"]))
 
         self.clear_scene()
         name_map: dict[str, str] = {}
@@ -3011,6 +3286,8 @@ class HexapodModeler(QMainWindow):
         self._refresh_alignment_targets()
         self._update_dynamic_axis_controls()
         self._refresh_leg_cartesian_controls()
+        self._load_tripod_leg_points_into_controls()
+        self._on_gait_type_changed()
         self.reset_camera()
 
     def _remap_constraint_parameters(self, parameters: dict, name_map: dict[str, str]) -> dict:
@@ -3042,6 +3319,8 @@ class HexapodModeler(QMainWindow):
         return remapped
 
     def clear_scene(self) -> None:
+        if hasattr(self, "gait_timer"):
+            self.stop_tripod_gait()
         for name in list(self.objects):
             self.plotter.remove_actor(name)
         self.objects.clear()
